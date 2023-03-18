@@ -99,6 +99,7 @@ private:
 	double _speedMaxRadian;
 	RuleCraftStats _stats;
 	bool _isAutoPatrolling;
+	bool _assignedToSlot;	
 	double _lonAuto, _latAuto;
 	std::vector<int> _pilots;
 	std::map<int, SoldierDeploymentData> _customSoldierDeployment;
@@ -152,6 +153,10 @@ public:
 	bool getIsAutoPatrolling() const;
 	/// Sets whether the craft is on auto-patrol.
 	void setIsAutoPatrolling(bool isAuto);
+	/// Gets whether the craft is assigned to a hangar slot.
+	bool getIsAssignedToSlot() const;
+	/// Sets whether the craft is assigned to a hangar slot
+	void setIsAssignedToSlot(bool isAssigned);	
 	/// Gets the auto-patrol longitude.
 	double getLongitudeAuto() const;
 	/// Sets the auto-patrol longitude.

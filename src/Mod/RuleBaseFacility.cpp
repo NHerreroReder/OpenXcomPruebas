@@ -45,7 +45,7 @@ RuleBaseFacility::RuleBaseFacility(const std::string &type, int listOrder) :
 	_sightRange(0), _sightChance(0), _radarRange(0), _radarChance(0),
 	_defense(0), _hitRatio(0), _fireSound(0), _hitSound(0), _placeSound(-1), _ammoMax(0), _rearmRate(1), _ammoNeeded(1), _listOrder(listOrder),
 	_trainingRooms(0), _maxAllowedPerBase(0), _sickBayAbsoluteBonus(0.0f), _sickBayRelativeBonus(0.0f),
-	_prisonType(0), _rightClickActionType(0), _verticalLevels(), _removalTime(0), _canBeBuiltOver(false), _destroyedFacility(0)
+	_prisonType(0), _hangarType(-1), _rightClickActionType(0), _verticalLevels(), _removalTime(0), _canBeBuiltOver(false), _destroyedFacility(0)
 {
 }
 
@@ -132,6 +132,7 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod)
 	_sickBayAbsoluteBonus = node["sickBayAbsoluteBonus"].as<float>(_sickBayAbsoluteBonus);
 	_sickBayRelativeBonus = node["sickBayRelativeBonus"].as<float>(_sickBayRelativeBonus);
 	_prisonType = node["prisonType"].as<int>(_prisonType);
+	_hangarType = node["hangarType"].as<int>(_hangarType);	
 	_rightClickActionType = node["rightClickActionType"].as<int>(_rightClickActionType);
 
 	if (const YAML::Node &items = node["buildCostItems"])
@@ -605,6 +606,15 @@ int RuleBaseFacility::getMaxAllowedPerBase() const
 int RuleBaseFacility::getPrisonType() const
 {
 	return _prisonType;
+}
+
+/**
+ * Gets the hangar type
+ * @return 0: garage, 1: craft hangar, 2: minisub dock, 3: rocket hangar, etc...
+ */
+int RuleBaseFacility::getHangarType() const
+{
+	return _hangarType;
 }
 
 /**

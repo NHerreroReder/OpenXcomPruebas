@@ -1019,6 +1019,55 @@ int Base::getAvailableHangars() const
 }
 
 /**
+ * Returns the amount of hangars of 
+ * a certain type used up by crafts 
+ * in the base.
+ * @return Number of hangars.
+ */
+int Base::getUsedHangars(int hangarType) const
+{
+	size_t total = 0;
+	for (auto *craft : _crafts)
+		if (craft->getRules()->getHangarType() == hangarType)
+			total++;	
+	for (auto* transfer : _transfers)
+	{
+		if (transfer->getType() == TRANSFER_CRAFT&& (transfer->getCraft()->getRules())->getHangarType() == hangarType)
+		{
+			total += transfer->getQuantity();
+		}
+	}
+	for (const auto* prod : _productions)
+	{
+		if (prod->getRules()->getProducedCraft() && prod->getRules()->getProducedCraft()->getHangarType() == hangarType)
+		{
+			// This should be fixed on the case when prod->getInfiniteAmount() == TRUE
+			total += (prod->getAmountTotal() - prod->getAmountProduced());
+		}
+	}
+	return total;
+}
+
+/**
+ * Returns the total amount of hangars of
+ * a certain type at the base.
+ * @param hangarType Hangar type.
+ * @return Number of hangars.
+ */
+int Base::getAvailableHangars(int hangarType) const
+{
+	int total = 0;
+	for (const auto* fac : _facilities)
+	{
+		if (fac->getBuildTime() == 0 && fac->getRules()->getHangarType() == hangarType)
+		{
+			total += fac->getRules()->getCrafts();
+		}
+	}
+	return total;
+}
+
+/**
  * Return laboratories space not used by a ResearchProject
  * @return laboratories space not used by a ResearchProject
  */
@@ -1923,11 +1972,11 @@ void Base::destroyFacility(BASEFACILITIESITERATOR facility)
 		}
 		else
 		{
-			int remove = -(getAvailableHangars() - getUsedHangars() - (*facility)->getRules()->getCrafts());
+			int remove = -(getAvailableHangars((*facility)->getRules()->getHangarType()) - getUsedHangars((*facility)->getRules()->getHangarType()) - (*facility)->getRules()->getCrafts());
 			remove = Collections::deleteIf(_productions, remove,
 				[&](Production* i)
 				{
-					if (i->getRules()->getProducedCraft())
+					if (i->getRules()->getProducedCraft() &&  (i->getRules()->getProducedCraft()->getHangarType() == (*facility)->getRules()->getHangarType()))
 					{
 						_engineers += i->getAssignedEngineers();
 						return true;
@@ -1941,7 +1990,7 @@ void Base::destroyFacility(BASEFACILITIESITERATOR facility)
 			remove = Collections::deleteIf(_transfers, remove,
 				[&](Transfer* i)
 				{
-					return i->getType() == TRANSFER_CRAFT;
+					return ((i->getType() == TRANSFER_CRAFT) && (i->getCraft()->getRules()->getHangarType() == (*facility)->getRules()->getHangarType()));
 				}
 			);
 		}
@@ -2181,6 +2230,10 @@ BasePlacementErrors Base::isAreaInUse(BaseAreaSubset area, const RuleBaseFacilit
 	RuleBaseFacilityFunctions missed;
 
 	int removedBuildings = 0;
+	int removedHangarType[9] = { };	 // Limit to 9 Hangar types! Better use a vector/map?
+	const auto hangarBegin = std::begin(removedHangarType);
+	const auto hangarEnd = std::end(removedHangarType);
+	auto hangarCurr = hangarBegin;	
 	int removedPrisonType[9] = { };
 	const auto prisonBegin = std::begin(removedPrisonType);
 	const auto prisonEnd = std::end(removedPrisonType);
@@ -2209,6 +2262,21 @@ BasePlacementErrors Base::isAreaInUse(BaseAreaSubset area, const RuleBaseFacilit
 					}
 					*prisonCurr = type;
 					++prisonCurr;
+				}
+			}
+
+			if (rule->getCrafts() > 0) // Do the same for hangar crafts than for prison types (not sure what this exactly does)
+			{
+				int type = rule->getHangarType();
+				if (std::find(hangarBegin, hangarCurr, type) == hangarCurr)
+				{
+					//too many hangar types, give up
+					if (hangarCurr == hangarEnd)
+					{
+						return BPE_Used;
+					}
+					*hangarCurr = type;
+					++hangarCurr;
 				}
 			}
 
@@ -2337,6 +2405,42 @@ BasePlacementErrors Base::isAreaInUse(BaseAreaSubset area, const RuleBaseFacilit
 				return BPE_Used_AlienContainment;
 			}
 		}
+	}
+
+	if (hangarBegin != hangarCurr)
+	{
+		int availableHangarTypes[std::size(removedHangarType)] = { };
+
+		auto sumAvailableHangars = [&](const RuleBaseFacility* rule)
+		{
+			int hangarSize = rule->getCrafts();
+			if (hangarSize > 0)
+			{
+				int type = rule->getHangarType();
+				auto find = std::find(hangarBegin, hangarCurr, type);
+				if (find != hangarCurr)
+				{
+					availableHangarTypes[find - hangarBegin] += hangarSize;
+				}
+			}
+		};		
+		// sum all available space
+		for (const auto* bf : _facilities)
+		{
+			auto* rule = bf->getRules();
+			if (!BaseAreaSubset::intersection(bf->getPlacement(), area))
+			{
+				sumAvailableHangars(rule);				
+			}
+		}
+
+		for (std::pair<int, int> typeSize : Collections::zip(Collections::range(hangarBegin, hangarCurr), Collections::range(availableHangarTypes)))
+		{
+			if (typeSize.second < getUsedHangars(typeSize.first))
+			{
+				return BPE_Used;
+			}
+		}			
 	}
 
 	// only check space for things that are removed

@@ -72,6 +72,7 @@ private:
 	int _healthRecoveryPerDay = 0;
 	float _sickBayAbsoluteBonus, _sickBayRelativeBonus;
 	int _prisonType;
+	int _hangarType;		
 	int _rightClickActionType;
 	std::vector<VerticalLevel> _verticalLevels;
 	std::vector<const RuleBaseFacility*> _leavesBehindOnSell;
@@ -203,6 +204,8 @@ public:
 	float getSickBayRelativeBonus() const { return _sickBayRelativeBonus; }
 	/// Gets the prison type.
 	int getPrisonType() const;
+	/// Gets the hangar type.
+	int getHangarType() const;		
 	/// Gets the action type to perform on right click.
 	int getRightClickActionType() const;
 	/// Gets the vertical levels for this facility map generation.

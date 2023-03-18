@@ -483,7 +483,10 @@ void BaseView::draw()
 		}
 	}
 
-	auto craftIt = _base->getCrafts()->begin();
+	for (auto *craft : *_base->getCrafts())  // Reset 'assigned state' to crafts at base
+	{
+		craft->setIsAssignedToSlot(false);	
+	}	
 
 	for (const auto* fac : *_base->getFacilities())
 	{
@@ -574,17 +577,17 @@ void BaseView::draw()
 		fac->setCraftForDrawing(0);
 		if (fac->getBuildTime() == 0 && fac->getRules()->getCrafts() > 0)
 		{
+			auto craftIt = _base->getCrafts()->begin(); // For every facility we have to search all crafts at base to look for one to fit
+			while((craftIt != _base->getCrafts()->end()) && (((*craftIt)->getStatus() == "STR_OUT") ||  (*craftIt)->getIsAssignedToSlot() || (fac->getRules()->getHangarType() !=  (*craftIt)->getRules()->getHangarType())))
+				++craftIt;	
 			if (craftIt != _base->getCrafts()->end())
-			{
-				if ((*craftIt)->getStatus() != "STR_OUT")
-				{
-					Surface *frame = _texture->getFrame((*craftIt)->getSkinSprite() + 33);
-					int fx = (fac->getX() * GRID_SIZE + (fac->getRules()->getSizeX() - 1) * GRID_SIZE / 2 + 2);
-					int fy = (fac->getY() * GRID_SIZE + (fac->getRules()->getSizeY() - 1) * GRID_SIZE / 2 - 4);
-					frame->blitNShade(this, fx, fy);
-					fac->setCraftForDrawing(*craftIt);
-				}
-				++craftIt;
+			{   // We founf a craft that fits in the hangar type
+				Surface *frame = _texture->getFrame((*craftIt)->getSkinSprite() + 33);
+				int fx = (fac->getX() * GRID_SIZE + (fac->getRules()->getSizeX() - 1) * GRID_SIZE / 2 + 2);
+				int fy = (fac->getY() * GRID_SIZE + (fac->getRules()->getSizeY() - 1) * GRID_SIZE / 2 - 4);
+				frame->blitNShade(this, fx, fy);
+				fac->setCraftForDrawing(*craftIt);
+				(*craftIt)->setIsAssignedToSlot(true); // This craft won' be considered for next facilities to draw			
 			}
 		}
 
