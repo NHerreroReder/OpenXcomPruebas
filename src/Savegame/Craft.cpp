@@ -90,8 +90,8 @@ Craft::Craft(const RuleCraft *rules, Base *base, int id) : MovingTarget(),
 	_interceptionOrder(0), _takeoff(0), _weapons(),
 	_status("STR_READY"), _lowFuel(false), _mission(false),
 	_inBattlescape(false), _inDogfight(false), _stats(),
-	_isAutoPatrolling(false), _lonAuto(0.0), _latAuto(0.0),
-	_skinIndex(0)
+	_isAutoPatrolling(false), _lonAuto(0.0), 
+	_latAuto(0.0), _skinIndex(0), _baseEscapePosition(-1,-1,-1)
 {
 	_stats = rules->getStats();
 	_items = new ItemContainer();
@@ -2266,5 +2266,20 @@ void Craft::ScriptRegister(ScriptParserBase* parser)
 	b.addDebugDisplay<&debugDisplayScript>();
 }
 
+/**
+ * Changes the craft's position at baseEscape.
+ * @param position new position; [-1,-1,-1] if not at BaseEscape.
+ */
+void Craft::setBaseEscapePosition(Position position){
+	_baseEscapePosition = position;
+}
+
+/**
+ * Gets he craft's position at baseEscape.
+ * @return Position at battleEscape [-1,-1,-1] means "not at BaseEscape".
+ */
+Position Craft::getBaseEscapePosition() const{
+	return _baseEscapePosition;
+}
 
 }

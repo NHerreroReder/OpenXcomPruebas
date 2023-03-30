@@ -43,6 +43,7 @@ class Vehicle;
 class RuleStartingCondition;
 class ScriptParserBase;
 class ScriptGlobal;
+class Position;
 
 enum UfoDetection : int;
 
@@ -91,6 +92,7 @@ private:
 	std::vector<VehicleDeploymentData> _customVehicleDeployment;
 	int _skinIndex;
 	ScriptValues<Craft> _scriptValues;
+	Position _baseEscapePosition;	
 
 	void recalcSpeedMaxRadian();
 
@@ -338,6 +340,11 @@ public:
 	bool validateAddingSoldier(int space, const Soldier* s) const;
 	/// Validates craft space and craft constraints on adding vehicles to a craft.
 	int validateAddingVehicles(int totalSize) const;
+
+	// Set position assigned to Craft in BaseEscape
+	void setBaseEscapePosition(const Position position);
+	/// Get position assigned to Craft in BaseEscape
+	Position getBaseEscapePosition() const;		
 };
 
 }

@@ -160,6 +160,7 @@ void RuleBaseFacility::load(const YAML::Node &node, Mod *mod)
 	std::sort(_buildOverFacilities.begin(), _buildOverFacilities.end());
 
 	_storageTiles = node["storageTiles"].as<std::vector<Position> >(_storageTiles);
+	_craftSlots = node["craftSlots"].as<std::vector<Position> >(_craftSlots);	
 	_destroyedFacilityName = node["destroyedFacility"].as<std::string>(_destroyedFacilityName);
 }
 
@@ -242,6 +243,13 @@ void RuleBaseFacility::afterLoad(const Mod* mod)
 		}
 	}
 
+	if (((_crafts > 1) && (_craftSlots.size() != _crafts)) || ((_crafts == 1) && (_craftSlots.size() > 1))){
+		throw Exception("Not enough position vectors for crafts allocation.");
+	}
+
+	if (_craftSlots.empty()){ 
+		_craftSlots.push_back(Position());                     
+	}
 	Collections::removeAll(_leavesBehindOnSellNames);
 }
 
@@ -655,6 +663,16 @@ BasePlacementErrors RuleBaseFacility::getCanBuildOverOtherFacility(const RuleBas
 const std::vector<Position> &RuleBaseFacility::getStorageTiles() const
 {
 	return _storageTiles;
+}
+
+/**
+ * Gets the list of positions where to place craft sprites overthis facility's sprite
+ * If empty, craft sprite will be at the center of the facility sprute
+ * @return the list of positions
+ */
+const std::vector<Position> &RuleBaseFacility::getCraftSlots() const
+{
+	return _craftSlots;
 }
 
 /*

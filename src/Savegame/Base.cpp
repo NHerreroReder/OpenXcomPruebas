@@ -1714,11 +1714,11 @@ int Base::damageFacility(BaseFacility *toBeDamaged)
 		fac->setBuildTime(0);
 		_facilities.push_back(fac);
 
-		// move the craft from the original hangar to the damaged hangar
+		// move the crafts vector from the original hangar to the damaged hangar
 		if (fac->getRules()->getCrafts() > 0)
 		{
-			fac->setCraftForDrawing(toBeDamaged->getCraftForDrawing());
-			toBeDamaged->setCraftForDrawing(0);
+			fac->setCraftsForDrawing(toBeDamaged->getCraftsForDrawing());
+			toBeDamaged->clearCraftsForDrawing();
 		}
 	}
 	else if (_mod->getDestroyedFacility())
@@ -1864,32 +1864,35 @@ void Base::destroyFacility(BASEFACILITIESITERATOR facility)
 	{
 		// hangar destruction - destroy crafts and any production of crafts
 		// if this will mean there is no hangar to contain it
-		if ((*facility)->getCraftForDrawing())
+		if (!((*facility)->getCraftsForDrawing().empty()))  // There are crafts in hangar
 		{
-			// remove all soldiers
-			for (Soldier *s : _soldiers)
+
+			for(Craft *craft : (*facility)->getCraftsForDrawing()) // Consider ALL crafts in hangar
 			{
-				if (s->getCraft() == (*facility)->getCraftForDrawing())
+				for (Soldier *s : _soldiers) 			// remove all soldiers
+				{
+					if (s->getCraft() == craft)
 				{
 					s->setCraft(0);
 				}
 			}
 
 			// remove all items
-			while (!(*facility)->getCraftForDrawing()->getItems()->getContents()->empty())
+				while (!(craft->getItems()->getContents()->empty()))
 			{
-				auto i = (*facility)->getCraftForDrawing()->getItems()->getContents()->begin();
+					auto i = craft->getItems()->getContents()->begin();
 				_items->addItem(i->first, i->second);
-				(*facility)->getCraftForDrawing()->getItems()->removeItem(i->first, i->second);
+					craft->getItems()->removeItem(i->first, i->second);
 			}
 			Collections::deleteIf(_crafts, 1,
 				[&](Craft* c)
 				{
-					return c == (*facility)->getCraftForDrawing();
+						return c == craft;
 				}
 			);
 		}
-		else
+		}
+		else  // No crafts in hangar, but it's possible we have to eliminate crafts in transfer/production to this hangar
 		{
 			int remove = -(getAvailableHangars() - getUsedHangars() - (*facility)->getRules()->getCrafts());
 			remove = Collections::deleteIf(_productions, remove,
@@ -1909,7 +1912,7 @@ void Base::destroyFacility(BASEFACILITIESITERATOR facility)
 			remove = Collections::deleteIf(_transfers, remove,
 				[&](Transfer* i)
 				{
-					return i->getType() == TRANSFER_CRAFT;
+					return ((i->getType() == TRANSFER_CRAFT));
 				}
 			);
 		}
@@ -2489,17 +2492,20 @@ std::vector<Craft*>::iterator Base::removeCraft(Craft *craft, bool unload)
 		craft->unload();
 	}
 
-	// Clear hangar
+	// Clear slots in hangar containing craft
 	for (auto* fac : _facilities)
 	{
-		if (fac->getCraftForDrawing() == craft)
+		for(Craft *fCraft : fac->getCraftsForDrawing()){ // Now, we consider a vector of crafts at the hangar facility
+			if (fCraft == craft) 
 		{
-			fac->setCraftForDrawing(0);
+				fac->delCraftForDrawing(fCraft); // If craft is at the hangar, it is deleted 
+				fac=*(_facilities.end()); // Craft has been found; no more search at facilities
 			break;
+			}
 		}
 	}
 
-	// Remove craft
+	// Remove craft from base vector
 	std::vector<Craft*>::iterator c;
 	for (c = _crafts.begin(); c != _crafts.end(); ++c)
 	{

@@ -76,6 +76,7 @@ private:
 	bool _canBeBuiltOver;
 	std::vector<const RuleBaseFacility*> _buildOverFacilities;
 	std::vector<Position> _storageTiles;
+	std::vector<Position> _craftSlots;		
 	std::string _destroyedFacilityName;
 	const RuleBaseFacility* _destroyedFacility;
 
@@ -205,6 +206,8 @@ public:
 	const std::vector<const RuleBaseFacility*> &getBuildOverFacilities() const { return _buildOverFacilities; }
 	/// Gets a list of which tiles are used to place items stored in this facility
 	const std::vector<Position> &getStorageTiles() const;
+	/// Gets a list of relative positions to place crafts over the facility sprite
+	const std::vector<Position> &getCraftSlots() const;			
 	/// Gets the ruleset for the destroyed version of this facility.
 	const RuleBaseFacility* getDestroyedFacility() const;
 };
