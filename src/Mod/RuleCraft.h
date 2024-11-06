@@ -207,7 +207,7 @@ private:
 	int _repairRate, _refuelRate, _transferTime, _score;
 	RuleTerrain *_battlescapeTerrainData;
 	int _maxSkinIndex;
-	bool _keepCraftAfterFailedMission, _allowLanding, _spacecraft, _notifyWhenRefueled, _autoPatrol, _undetectable;
+	bool _keepCraftAfterFailedMission, _allowLanding, _spacecraft, _notifyWhenRefueled, _autoPatrol, _undetectable, _isSmallCraft;
 	int _missilePower;
 	int _listOrder, _maxAltitude;
 	std::string _defaultAltitude;
@@ -335,6 +335,8 @@ public:
 	bool isMissile() const { return (_missilePower > 0); }
 	/// Gets the missile power.
 	int missilePower() const { return _missilePower; }
+	/// Is this a small craft?
+	bool isSmallCraft() const { return _isSmallCraft; }	
 	/// Gets the list weight for this craft.
 	int getListOrder() const;
 	/// Gets the deployment priority for the craft.
