@@ -19,6 +19,7 @@
 #include "DogfightState.h"
 #include <cmath>
 #include <sstream>
+#include <iostream>
 #include "GeoscapeState.h"
 #include "../Engine/Game.h"
 #include "../Engine/Screen.h"
@@ -329,8 +330,9 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	_craftSprite = new Surface(22, 25, _x + 93, _y + 40);
 	_damage = new Surface(22, 25, _x + 93, _y + 40);
 	_craftShield = new Surface(22, 25, _x + 93, _y + 40);
-
 	_btnMinimize = new InteractiveSurface(12, 12, _x, _y);
+ 	_btnSelfDestruct = new InteractiveSurface(12, 12, _x + 70, _y);
+ 	_btnSelfDestructAct = new InteractiveSurface(12, 12, _x + 70, _y);		
 	_preview = new InteractiveSurface(160, 96, _x, _y);
 	_btnStandoff = new ImageButton(36, 15, _x + 83, _y + 4);
 	_btnCautious = new ImageButton(36, 15, _x + 120, _y + 4);
@@ -362,6 +364,8 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	add(_damage);
 	add(_craftShield);
 	add(_btnMinimize);
+	add(_btnSelfDestruct);
+	add(_btnSelfDestructAct);	
 	add(_btnStandoff, "standoffButton", "dogfight", _window);
 	add(_btnCautious, "cautiousButton", "dogfight", _window);
 	add(_btnStandard, "standardButton", "dogfight", _window);
@@ -441,6 +445,15 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 
 	_btnMinimize->onMouseClick((ActionHandler)&DogfightState::btnMinimizeClick);
 	_btnMinimize->setVisible(!_ufoIsAttacking);
+
+	if(Options::kamikazeCrafts && !(_craft->getRules()->isKamikaze()))
+	{
+		_btnSelfDestruct->onMouseClick((ActionHandler)&DogfightState::btnSelfDestructClick);
+        _btnSelfDestruct->setVisible(true);
+	}else{
+		int offset = _game->getMod()->getInterface("dogfight")->getElement("minimizeButtonDummy")->TFTDMode ? 1 : 0;
+		_window->drawRect(_btnSelfDestruct->getX() + 1 + offset, _btnSelfDestruct->getY() + 1, _btnSelfDestruct->getWidth() - 2 - offset, _btnSelfDestruct->getHeight() - 2, dogfightInterface->getElement("minimizeButtonDummy")->color + 4);
+	}	
 
 	_btnStandoff->copy(_window);
 	_btnStandoff->setGroup(&_mode);
@@ -700,6 +713,27 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	{
 		_ufo->setShieldRechargeHandle(_interceptionNumber);
 	}
+
+	if(Options::kamikazeCrafts && craft->getRules()->isKamikaze())
+	{
+		btnAggressivePress(0);
+		btnSelfDestructClick(0);
+		_btnSelfDestructAct->setVisible(true);		
+ 		setStatus("STR_SELF_DESTRUCT_ACTIVATED");	
+		_btnMinimize->setVisible(false);		
+		_btnStandoff->setVisible(false);	
+	    _btnCautious->setVisible(false);	
+		_btnStandard->setVisible(false);	
+		_btnAggressive->setVisible(false);	
+		_btnDisengage->setVisible(false);			
+		int offset = _game->getMod()->getInterface("dogfight")->getElement("minimizeButtonDummy")->TFTDMode ? 1 : 0;
+		_window->drawRect(_btnStandoff->getX() + 2, _btnStandoff->getY() + 2, _btnStandoff->getWidth() - 4, _btnStandoff->getHeight() - 4, dogfightInterface->getElement("cautiousButton")->color + 4);
+		_window->drawRect(_btnCautious->getX() + 2, _btnCautious->getY() + 2, _btnCautious->getWidth() - 4, _btnCautious->getHeight() - 4, dogfightInterface->getElement("cautiousButton")->color + 4);
+		_window->drawRect(_btnStandard->getX() + 2, _btnStandard->getY() + 2, _btnStandard->getWidth() - 4, _btnStandard->getHeight() - 4, dogfightInterface->getElement("standardButton")->color + 4);
+		_window->drawRect(_btnDisengage->getX() + 2, _btnDisengage->getY() + 2, _btnDisengage->getWidth() - 4, _btnDisengage->getHeight() - 4, dogfightInterface->getElement("disengageButton")->color + 4);
+		_window->drawRect(_btnAggressive->getX() + 2, _btnAggressive->getY() + 2, _btnAggressive->getWidth() - 4, _btnAggressive->getHeight() - 4, dogfightInterface->getElement("disengageButton")->color + 4);
+		_window->drawRect(_btnMinimize->getX() + 1 + offset, _btnMinimize->getY() + 1, _btnMinimize->getWidth() - 2 - offset, _btnMinimize->getHeight() - 2, dogfightInterface->getElement("minimizeButtonDummy")->color + 4);
+	}		
 }
 
 /**
@@ -937,6 +971,7 @@ void DogfightState::animate()
  */
 void DogfightState::update()
 {
+	static int flashingButton=0;	
 	bool finalRun = false;
 	// Check if craft is not low on fuel when window minimized, and
 	// Check if crafts destination hasn't been changed when window minimized.
@@ -1099,6 +1134,42 @@ void DogfightState::update()
 			}
 		}
 
+        // NHR: Deal with self-destruction -> damage over Craft AND UFO (this damage is prior to any other)
+		// NHR: TODO:
+		//      Distance to apply self-destruct?
+		//      Damage to UFO?
+		if (Options::kamikazeCrafts && _selfDestructPressed) // NHR: Or craft isKamikaze
+		{
+			flashingButton++;
+			if(flashingButton == 10)
+			  _btnSelfDestructAct->setVisible(true);	
+			else if(flashingButton == 20)
+			{
+			  _btnSelfDestructAct->setVisible(false);	
+			  flashingButton = 0;
+			}		
+			std::cout << "Distancia:" <<  _currentDist << ", " << AGGRESSIVE_DIST;
+			if (_currentDist <= AGGRESSIVE_DIST) // Minimum distance condition
+			{
+				std::cout << "Applying self-destruct\n";
+				int damage = 2*_craft->getCraftStats().damageMax; // Testing: fixed damage? ¿what damage to state?
+				_craft->setDamage(_craft->getDamage() + damage);
+				// Handle UFO shields
+				int shieldDamage = 0;
+				if (_ufo->getShield() != 0)
+				{
+					shieldDamage = damage;
+					// scale down by bleed-through factor and scale up by shield-effectiveness factor
+					damage = std::max(0, shieldDamage - _ufo->getShield()) * _ufo->getCraftStats().shieldBleedThrough;
+					_ufo->setShield(_ufo->getShield() - shieldDamage);
+				}			
+				damage = std::max(0, damage - _ufo->getCraftStats().armor);
+				_ufo->setDamage(_ufo->getDamage() + damage, _game->getMod());	
+				if (_ufo->isCrashed())
+					_ufo->setShotDownByCraftId(_craft->getUniqueId());
+				//_end = true;	// NHR: If on, dogfight ends; if don't it tries another dogfight cycle
+			}			
+		}	
 		// Move projectiles and check for hits.
 		for (auto* p : _projectiles)
 		{
@@ -1869,6 +1940,29 @@ void DogfightState::setStatus(const std::string &status)
 }
 
 /**
+ * SelfDestruct Craft
+ * @param action Pointer to an action.
+ */
+void DogfightState::btnSelfDestructClick(Action *)
+{
+		_selfDestructPressed = !_selfDestructPressed;
+		if (_selfDestructPressed)
+		{
+			setStatus("STR_SELF_DESTRUCT_ACTIVATED");
+		    int offset = _game->getMod()->getInterface("dogfight")->getElement("minimizeButtonDummy")->TFTDMode ? 1 : 0;
+		    int color = _selfDestructPressed ? DAMAGE_MIN : DAMAGE_MAX;
+		    _btnSelfDestructAct->drawRect(1 + offset, 1, _btnSelfDestruct->getWidth() - 2 - offset, _btnSelfDestruct->getHeight() - 2, _colors[color]);
+            _btnSelfDestructAct->setVisible(true);
+        }
+		else
+		{
+			setStatus("STR_SELF_DESTRUCT_CANCELLED");
+            _btnSelfDestructAct->setVisible(false);			
+		}
+		return;
+}
+
+/**
  * Minimizes the dogfight window.
  * @param action Pointer to an action.
  */
@@ -2093,6 +2187,7 @@ void DogfightState::btnUfoClick(Action *)
 	_btnDisengage->setVisible(false);
 	_btnUfo->setVisible(false);
 	_btnMinimize->setVisible(false);
+	_btnSelfDestruct->setVisible(false);	
 	for (int i = 0; i < _weaponNum; ++i)
 	{
 		_weapon[i]->setVisible(false);
@@ -2114,6 +2209,10 @@ void DogfightState::previewClick(Action *)
 	_btnDisengage->setVisible(!_disableDisengage);
 	_btnUfo->setVisible(true);
 	_btnMinimize->setVisible(!_ufoIsAttacking || _craftIsDefenseless);
+	if (Options::kamikazeCrafts)
+	{	
+	   _btnSelfDestruct->setVisible(true);	
+	}	
 	for (int i = 0; i < _weaponNum; ++i)
 	{
 		_weapon[i]->setVisible(true);
@@ -2329,6 +2428,10 @@ void DogfightState::setMinimized(const bool minimized)
 	_btnUfo->setVisible(!minimized);
 	_btnMinimize->setVisible(!minimized);
 	_battle->setVisible(!minimized);
+	 if (Options::kamikazeCrafts)
+	 {
+	_btnSelfDestruct->setVisible(!minimized);	
+	 }	
 	for (int i = 0; i < _weaponNum; ++i)
 	{
 		_weapon[i]->setVisible(!minimized);

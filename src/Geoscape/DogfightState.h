@@ -49,7 +49,7 @@ private:
 	GeoscapeState *_state;
 	Timer *_craftDamageAnimTimer;
 	Surface *_window, *_battle, *_range[RuleCraft::WeaponMax], *_damage, *_craftSprite, *_craftShield;
-	InteractiveSurface *_btnMinimize, *_preview, *_weapon[RuleCraft::WeaponMax];
+	InteractiveSurface *_btnMinimize, *_btnSelfDestruct,*_btnSelfDestructAct, *_preview, *_weapon[RuleCraft::WeaponMax];
 	ImageButton *_btnStandoff, *_btnCautious, *_btnStandard, *_btnAggressive, *_btnDisengage, *_btnUfo;
 	ImageButton *_mode;
 	InteractiveSurface *_btnMinimizedIcon;
@@ -103,6 +103,8 @@ public:
 	void setStatus(const std::string &status);
 	/// Handler for clicking the Minimize button.
 	void btnMinimizeClick(Action *action);
+	/// Handler for clicking the SelfDestruct button.
+	void btnSelfDestructClick(Action *action);		
 	/// Handler for pressing the Standoff button.
 	void btnStandoffPress(Action *action);
 	void btnStandoffRightPress(Action *action);

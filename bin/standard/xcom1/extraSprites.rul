@@ -149,3 +149,7 @@ extraSprites:
     singleImage: true
     files:
       0: Resources/UI/WpnActive.png
+  - type: INTERWIN.DAT
+    singleImage: true
+    files:
+      0: Resources/UI/INTERWIN_MOD.png

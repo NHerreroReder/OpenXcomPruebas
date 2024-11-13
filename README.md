@@ -12,6 +12,30 @@ and the [wiki](https://www.ufopaedia.org/index.php/OpenXcom).
 
 Uses modified code from SDL\_gfx (LGPL) with permission from author.
 
+## 'Missiles' fork (work in progress)
+This is a fork from official master of OXCE+ which allows a new feature which
+has been rejected by official OXCE+ developers. 
+This feature changes self-destruct behavior, respect to original one in OXCE+, which
+can only be triggered when "situation is hopeless for the craft" (i.e. it cannot
+disengage and has no ammo left). This option was originally intended to avoid 
+stall situations in which neither xcom craft could bring down or disengage enemy
+ufo nor ufo could do the same.
+Instead -if option is enabled- a new button will appear at top right, to allow 
+self-destruct whenever player wants, with no restrictions. Self-destruct will
+take effect only at "agggresive distance" -so ufo can try to bring down kamikaze 
+craft-. It will destroy xcom craft but also will damage ufo. (this two decisions
+are under study, so different crafts could have different distance and damage 
+values)
+A new dogfight UI graphic is given at /bin/common/Resources/UI/Interwin_Mod.png,
+to allow the new self-destruct button.
+
+Also under study (WIP) a related feature so crafts can be "missile" type. Missile
+crafts cannot shot weapons and would automatically activate a self-destruct behavior. 
+They are intended to be faster than most crafts so they will probably self-destruct
+giving some damage to enemy crafts.
+
+Option can be enabled/disabled at OXCE+ ADVANCED Menu, under OTHER button.
+
 ## Installation
 
 OpenXcom requires a vanilla copy of the X-COM resources -- from either or both

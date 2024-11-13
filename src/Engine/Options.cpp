@@ -540,6 +540,7 @@ void createOptionsOTHER()
 
 void createAdvancedOptionsOTHER()
 {
+	_info.push_back(OptionInfo(OPTION_OTHER, "kamikazeCraft", &kamikazeCrafts, true, "STR_KAMIKAZECRAFTS", "STR_GEOSCAPE"));	
 	// your fork's advanced options here
 }
 
