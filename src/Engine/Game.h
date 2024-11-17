@@ -33,6 +33,8 @@ class Mod;
 class ModInfo;
 class FpsCounter;
 class Action;
+class MapEditor;
+class MapEditorSave;
 
 /**
  * The core of the game engine, manages the game's entire contents and structure.
@@ -57,6 +59,7 @@ private:
 	int _timeUntilNextFrame;
 	bool _ctrl, _alt, _shift, _rmb, _mmb;
 	static const double VOLUME_GRADIENT;
+	MapEditor *_mapEditor;	
 
 public:
 	/// Creates a new game and initializes SDL.
@@ -157,6 +160,11 @@ public:
 	bool getRMBFlag() const { return _rmb; }
 	/// Gets the _mmb flag.
 	bool getMMBFlag() const { return _mmb; }
+
+	/// Sets the map editor for the game
+	void setMapEditor(MapEditor *mapEditor);
+	/// Gets the map editor for the game
+	MapEditor *getMapEditor();
 };
 
 }

@@ -82,6 +82,7 @@ void Node::load(const YAML::Node &node)
 	_priority = node["priority"].as<int>(_priority);
 	_allocated = node["allocated"].as<bool>(_allocated);
 	_nodeLinks = node["links"].as< std::vector<int> >(_nodeLinks);
+	_linkTypes = node["linkTypes"].as< std::vector<int> >(_linkTypes);	
 	_dummy = node["dummy"].as<bool>(_dummy);
 }
 
@@ -104,6 +105,7 @@ YAML::Node Node::save() const
 	if (_allocated)
 		node["allocated"] = _allocated;
 	node["links"] = _nodeLinks;
+	node["linkTypes"] = _linkTypes;	
 	if (_dummy)
 		node["dummy"] = _dummy;
 	return node;
@@ -128,6 +130,15 @@ NodeRank Node::getRank() const
 }
 
 /**
+ * Set the rank of units that can spawn on this node.
+ * @param rank the new node rank
+ */
+void Node::setRank(int rank)
+{
+	_rank = rank;
+}
+
+/**
  * Get the priority of this spawnpoint.
  * @return priority
  */
@@ -137,12 +148,30 @@ int Node::getPriority() const
 }
 
 /**
+ * Sets the node's priority
+ * @param priority the priority of the spawn point
+ */
+void Node::setPriority(int priority)
+{
+	_priority = priority;
+}
+
+/**
  * Gets the Node's position.
  * @return position
  */
 Position Node::getPosition() const
 {
 	return _pos;
+}
+
+/**
+ * Sets the Node's position.
+ * @param pos the new position
+ */
+void Node::setPosition(Position pos)
+{
+	_pos = pos;
 }
 
 /**
@@ -161,6 +190,16 @@ std::vector<int> *Node::getNodeLinks()
 }
 
 /**
+ * Get the unit types that can use the links
+ * note that this is only used to not lose information in RMP files for the OXCE map editor, it's not actually used anywhere in the game
+ * @return the types of units that can use the links
+ */
+std::vector<int> *Node::getLinkTypes()
+{
+	return &_linkTypes;
+}
+
+/**
  * Gets the Node's type.
  * @return type
  */
@@ -168,6 +207,7 @@ int Node::getType() const
 {
 	return _type;
 }
+
 
 bool Node::isAllocated() const
 {
@@ -189,9 +229,27 @@ bool Node::isTarget() const
 	return _reserved == 5;
 }
 
+/**
+ * Sets the node as a target or not
+ * @param reserved is a target if == 5
+ */
+void Node::setReserved(int reserved)
+{
+	_reserved = reserved;
+}
+
 void Node::setType(int type)
 {
 	_type = type;
+}
+
+/**
+ * Set's the nodes "flags" variable
+ * @param flags the patrol desirability value
+ */
+void Node::setFlags(int flags)
+{
+	_flags = flags;
 }
 
 void Node::setDummy(bool dummy)
