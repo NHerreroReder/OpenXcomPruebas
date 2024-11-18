@@ -19,6 +19,7 @@
  */
 
 #include <vector>
+#include <iostream>
 #include "Position.h"
 #include "../Mod/MapData.h"
 
@@ -211,9 +212,13 @@ public :
     std::string getFullPathToMAPToLoad();
     /// Gets the full path to a RMP file we're loading
     std::string getFullPathToRMPToLoad();
+    /// Returns true if map file to load is MAP type
+    bool getMapFileToLoadType();
+    /// Sets map file to load type
+    void setMapFileToLoadType(bool fileIsMAP);    
     /// Updates the file data on the current map
-    void updateMapFileInfo(std::string mapName, std::string baseDirectory, std::string terrainName);
-    void updateMapFileInfo(std::string fullPath, std::string terrainName = "");
+    void updateMapFileInfo(std::string mapName, std::string baseDirectory, bool fileisMAP, std::string terrainName);
+    void updateMapFileInfo(std::string fullPath, bool fileisMAP, std::string terrainName = "");
     void updateMapFileInfo();
     /// Checks whether a directory has been set for the current map file
     bool currentMapFileNeedsDirectory();

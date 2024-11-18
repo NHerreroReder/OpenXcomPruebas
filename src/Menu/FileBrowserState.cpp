@@ -34,6 +34,7 @@
 #include "../Interface/TextButton.h"
 #include "../Interface/TextEdit.h"
 #include "../Interface/TextList.h"
+#include "../Interface/ComboBox.h"
 #include "../Interface/Frame.h"
 #include "../Mod/Mod.h"
 #include "../Mod/RuleInterface.h"
@@ -124,6 +125,7 @@ FileBrowserState::FileBrowserState(State *parent, bool saveMode, std::string fil
 
 	_btnOk = new TextButton(100, 16, 8, 176);
 	_btnCancel = new TextButton(100, 16, 110, 176);
+	_cbxFileType = new ComboBox(this, 60, 16, 222, 176, true);		
 
 	_lstBrowser = new TextList(274, 104, 14, 52);
 
@@ -154,7 +156,7 @@ FileBrowserState::FileBrowserState(State *parent, bool saveMode, std::string fil
 	{
 		add(button, "button", "mainMenu");
 	}
-
+	add(_cbxFileType, "button", "mainMenu");	
 	centerAllSurfaces();
 
 	// Set up objects
@@ -205,6 +207,15 @@ FileBrowserState::FileBrowserState(State *parent, bool saveMode, std::string fil
 	_btnCancel->onMouseClick((ActionHandler)&FileBrowserState::btnCancelClick);
 	_btnCancel->onKeyboardPress((ActionHandler)&FileBrowserState::btnCancelClick, Options::keyCancel);
     _btnCancel->onKeyboardRelease((ActionHandler)&FileBrowserState::edtQuickSearchFocus, Options::keyToggleQuickSearch);
+
+	_fileExtensions.clear();  // NHR: could be a std::string? defined here
+	_fileExtensions.push_back("MAP");
+	_fileExtensions.push_back("MAP2");	
+
+    _cbxFileType->setOptions(_fileExtensions, true);
+	_cbxFileType->setSelected(0);
+	_cbxFileType->onChange((ActionHandler)&FileBrowserState::cbxFileTypeChange);	
+    _cbxFileType->setVisible(true);
 
 	_txtSearch->setText(tr(saveMode ? "STR_FILE_BROWSER_ENTER_NAME" : "STR_FILE_BROWSER_SEARCH"));
 
@@ -800,5 +811,22 @@ void FileBrowserState::btnCancelClick(Action *)
 {
 	_game->popState();
 }
+
+/**
+ * Changes the Music Format option.
+ * @param action Pointer to an action.
+ */
+void FileBrowserState::cbxFileTypeChange(Action *)
+{
+	if(_cbxFileType->getSelected() == 0) // NHR: Duda, probar
+	{
+	   _parent->setFileIsMAP(true);
+	}
+	else
+	{
+	   _parent->setFileIsMAP(false);
+	}
+}
+
 
 }

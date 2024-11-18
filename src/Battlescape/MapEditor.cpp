@@ -899,13 +899,31 @@ std::string MapEditor::getFullPathToRMPToLoad()
 }
 
 /**
+ * Returns true if map file to load is MAP type
+ */
+bool MapEditor::getMapFileToLoadType()
+{
+    return _mapSave->getMapFileToLoad()->fileisMAP;
+}
+
+/**
+ * Sets map file to load type
+ */
+void MapEditor::setMapFileToLoadType(bool fileisMAP)
+{
+    _mapSave->getMapFileToLoad()->fileisMAP = fileisMAP;
+}
+
+
+/**
  * Updates the file data on the current map
  * @param mapName changes the map name
  * @param baseDirectory where the file is located (parent directory for MAPS/ROUTES)
  */
-void MapEditor::updateMapFileInfo(std::string mapName, std::string baseDirectory, std::string terrainName)
+void MapEditor::updateMapFileInfo(std::string mapName, std::string baseDirectory, bool fileisMAP, std::string terrainName)
 {
     _mapSave->getCurrentMapFile()->name = mapName;
+    _mapSave->getCurrentMapFile()->fileisMAP = fileisMAP;  
     _mapSave->getCurrentMapFile()->baseDirectory = baseDirectory;
     _mapSave->getCurrentMapFile()->terrain = terrainName;
     _mapSave->getCurrentMapFile()->mods.clear();
@@ -925,7 +943,7 @@ void MapEditor::updateMapFileInfo(std::string mapName, std::string baseDirectory
  * @param fullPath directory to the file
  * @param terrainName name of the terrain (defaults to "")
  */
-void MapEditor::updateMapFileInfo(std::string fullPath, std::string terrainName)
+void MapEditor::updateMapFileInfo(std::string fullPath, bool fileIsMAP, std::string terrainName)
 {
     // Get just the file name
     std::string fileName = getFileName(fullPath);
@@ -937,8 +955,7 @@ void MapEditor::updateMapFileInfo(std::string fullPath, std::string terrainName)
     {
         terrainName = _mapSave->getCurrentMapFile()->terrain;
     }
-
-    updateMapFileInfo(fileName, filePath, terrainName);
+    updateMapFileInfo(fileName, filePath, fileIsMAP, terrainName);
 }
 
 /**
@@ -946,7 +963,7 @@ void MapEditor::updateMapFileInfo(std::string fullPath, std::string terrainName)
  */
 void MapEditor::updateMapFileInfo()
 {
-    updateMapFileInfo(getMapFileToLoadName(), getMapFileToLoadDirectory(), getMapFileToLoadTerrain());
+    updateMapFileInfo(getMapFileToLoadName(),getMapFileToLoadDirectory(), getMapFileToLoadType(), getMapFileToLoadTerrain());
 }
 
 /**
@@ -967,6 +984,8 @@ void MapEditor::saveMapFile()
 {
     std::string message = "STR_MAP_EDITOR_SAVED_SUCCESSFULLY";
     std::string filename = _mapSave->getCurrentMapFile()->name;
+    bool fileisMAP = _mapSave->getCurrentMapFile()->fileisMAP;
+    std::string fileType =  fileisMAP?"MAP":"MAP2";
     std::string filepath = _mapSave->getCurrentMapFile()->baseDirectory;
     std::string logInfo = "\n    mapDataSets:\n";
     for (auto i : *_save->getMapDataSets())
@@ -986,16 +1005,27 @@ void MapEditor::saveMapFile()
         fullpath = fullpath + MapEditorSave::MAP_DIRECTORY;
     }
     fullpath = CrossPlatform::convertPath(fullpath);
-    fullpath = fullpath + filename + ".MAP"; //TODO add extensions to MapEditorSave's consts?
+    fullpath = fullpath + filename + "." + fileType; //TODO add extensions to MapEditorSave's consts?
     Log(LOG_INFO) << "Saving edited map file " + fullpath;
 
+
     std::vector<unsigned char> data;
-    data.clear();
+    std::vector<uint16_t> data2;    
+    if(fileisMAP){
+        data.clear();
 
-    data.push_back((unsigned char)_save->getMapSizeY()); // x and y are in opposite order in MAP files
-    data.push_back((unsigned char)_save->getMapSizeX());
-    data.push_back((unsigned char)_save->getMapSizeZ());
+        data.push_back((unsigned char)_save->getMapSizeY()); // x and y are in opposite order in MAP files
+        data.push_back((unsigned char)_save->getMapSizeX());
+        data.push_back((unsigned char)_save->getMapSizeZ());
+    }
+    else
+    {
+        data2.clear();
 
+        data2.push_back((uint16_t)_save->getMapSizeY()); // x and y are in opposite order in MAP files
+        data2.push_back((uint16_t)_save->getMapSizeX());
+        data2.push_back((uint16_t)_save->getMapSizeZ());        
+    }
     for (int z = _save->getMapSizeZ() - 1; z > -1; --z)
     {
         for (int y = 0; y < _save->getMapSizeY(); ++y)
@@ -1022,18 +1052,28 @@ void MapEditor::saveMapFile()
                     {
                         mapDataID = 0;
                     }
-
-                    data.push_back((unsigned char)mapDataID);
+                    if(fileisMAP)
+                        data.push_back((unsigned char)mapDataID);
+                    else
+                        data2.push_back((uint16_t)mapDataID);                    
                 }
             }
         }
     }
-
-	if (!CrossPlatform::writeFile(fullpath, data))
-	{
-		throw Exception("Failed to save " + fullpath);
-	}
-
+    if(fileisMAP)
+    {
+        if (!CrossPlatform::writeFile(fullpath, data))
+        {
+            throw Exception("Failed to save " + fullpath);
+        }
+    }
+    else
+    {
+        if (!CrossPlatform::writeFile(fullpath, data2))
+        {
+            throw Exception("Failed to save " + fullpath);
+        }        
+    }
     fullpath = filepath;
     if(CrossPlatform::folderExists(fullpath + MapEditorSave::RMP_DIRECTORY))
     {

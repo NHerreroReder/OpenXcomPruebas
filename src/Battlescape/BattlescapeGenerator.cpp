@@ -77,6 +77,7 @@ BattlescapeGenerator::BattlescapeGenerator(Game *game) :
 	_mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _missionTexture(0), _globeTexture(0), _worldShade(0),
 	_unitSequence(0), _craftInventoryTile(0), _alienCustomDeploy(0), _alienCustomMission(0), _alienItemLevel(0), _ufoDamagePercentage(0),
 	_baseInventory(false), _generateFuel(true), _craftDeployed(false), _ufoDeployed(false), _craftZ(0), _craftPos(), _markAsReinforcementsBlock(0), _blocksToDo(0), _dummy(0)
+    , _fileIsMAP(true)
 {
 	_allowAutoLoadout = !Options::disableAutoEquip;
 	if (_game->getSavedGame()->getDisableSoldierEquipment())
@@ -2061,6 +2062,11 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 	char size[3];
 	unsigned char value[4];
 	std::string filename = "MAPS/" + mapblock->getName() + ".MAP";
+	if(_fileIsMAP == false)
+	{
+		filename = "MAPS/" + mapblock->getName() + ".MAP2";
+	}
+	
 	std::unique_ptr<std::istream> mapFile = 0;
 	unsigned int terrainObjectID;
 
@@ -4837,13 +4843,22 @@ void BattlescapeGenerator::loadMapForEditing()
 	}
 	else
 	{
-		filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP";
+		filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP"; // NHR: Aqui se decide la extension
+		if(!FileMap::fileExists(filename))
+		{
+		    std::cout << "El fichero " << filename << " no existe. Probando la versión MAP2" << std::endl;
+			filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP2"; 	
+			_fileIsMAP = false;			
+		}
+		else
+		{
+			_fileIsMAP = true;	
+		}
 		block = _terrain->getMapBlock(_game->getMapEditor()->getMapFileToLoadName());
 	}
 
 	int sizex, sizey, sizez;
 	char size[3];
-
 	// Load file
 	if (!mapFile)
 		mapFile = FileMap::getIStream(filename);
@@ -4863,7 +4878,7 @@ void BattlescapeGenerator::loadMapForEditing()
 		i->loadData(_game->getMod()->getMCDPatch(i->getName()));
 		_save->getMapDataSets()->push_back(i);
 	}
-
+   	std::cout << "Cargando fichero " << filename  << std::endl;
 	if (loadFromFullPath)
 	{
 		block = new MapBlock(_game->getMapEditor()->getMapFileToLoadName(), sizex, sizey, sizez);

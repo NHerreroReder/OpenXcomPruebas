@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <iostream>
 #include <iomanip>
 #include <SDL_gfxPrimitives.h>
 #include "Map.h"
@@ -1039,9 +1040,9 @@ void MapEditorState::think()
 	// passed the name of a file (including path) from the FileBrowser: time to save!
 	if (_fileName != "")
 	{
-		_editor->updateMapFileInfo(_fileName);
-		_editor->saveMapFile();
-
+		_editor->updateMapFileInfo(_fileName, _fileIsMAP); // NHR: ¿cambiar?	
+		_editor->saveMapFile(); //NHR: ¿Pasar tipo de mapa?
+        std::cout << "Time to save!" << _fileIsMAP << std::endl;
 		_fileName = "";
 	}
 
