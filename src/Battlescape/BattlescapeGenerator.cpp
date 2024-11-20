@@ -3326,7 +3326,9 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 										bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 										int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-										if(_fileIsMAP)
+										std::string filename = "MAPS/" + _blocks[x][y]->getName() + ".MAP";	
+										bool existe = FileMap::fileExists(filename);
+										if(existe)
 										{
 											loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
 										}
@@ -3418,7 +3420,8 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 										bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 										int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-										if(_fileIsMAP)
+										std::string filename = "MAPS/" + _blocks[x][y]->getName() + ".MAP";																			
+										if(FileMap::fileExists(filename))
 										{
 											loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
 										}
@@ -3577,7 +3580,8 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 
 		for (size_t i = 0; i < ufoMaps.size(); ++i)
 		{
-			if(_fileIsMAP)
+			std::string filename = "MAPS/" + ufoMaps[i]->getName() + ".MAP";	
+			if(FileMap::fileExists(filename))
 			{
 				loadMAP(ufoMaps[i], _ufoPos[i].x * 10, _ufoPos[i].y * 10, _ufoZ[i], ufoTerrain, mapDataSetIDOffset, false, false, i);
 			}
@@ -3606,7 +3610,8 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 			mds->loadData(_game->getMod()->getMCDPatch(mds->getName()));
 			_save->getMapDataSets()->push_back(mds);
 		}
-		if(_fileIsMAP)
+		std::string filename = "MAPS/" + craftMap->getName() + ".MAP";		
+		if(FileMap::fileExists(filename))
 		{		
 			loadMAP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, _craftRules->getBattlescapeTerrainData(), mapDataSetIDOffset + craftDataSetIDOffset, _craftRules->isMapVisible(), true);
 		}
@@ -4189,8 +4194,9 @@ void BattlescapeGenerator::loadVerticalLevels(MapScript *command, bool repopulat
 					bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 					int terrainMapDataSetIDOffset = loadExtraTerrain(levelTerrain);
-					if(_fileIsMAP)
-					{						
+					std::string filename = "MAPS/" + block->getName() + ".MAP";	
+					if(FileMap::fileExists(filename))
+					{							
 						loadMAP(block, x * 10, y * 10, zOffset, levelTerrain, terrainMapDataSetIDOffset, visible);
 					}
 					else
@@ -4231,8 +4237,9 @@ void BattlescapeGenerator::loadVerticalLevels(MapScript *command, bool repopulat
 			bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 			int terrainMapDataSetIDOffset = loadExtraTerrain(ceilingTerrain);
-			if(_fileIsMAP)
-			{			
+			std::string filename = "MAPS/" + ceilingBlock->getName() + ".MAP";			
+			if(FileMap::fileExists(filename))
+			{				
 				loadMAP(ceilingBlock, x * 10, y * 10, zOffset, ceilingTerrain, terrainMapDataSetIDOffset, visible);
 			}
 			else
@@ -4716,7 +4723,8 @@ bool BattlescapeGenerator::addLine(MapDirection direction, const std::vector<SDL
 			_blocks[roadX][roadY] = randomMapBlock2;
 			clearModule(roadX * 10, roadY * 10, 10, 10);
 			int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-			if(_fileIsMAP)
+			std::string filename = "MAPS/" + _blocks[roadX][roadY]->getName() + ".MAP";			
+			if(FileMap::fileExists(filename))
 			{				
 				loadMAP(_blocks[roadX][roadY], roadX * 10, roadY * 10, 0, terrain, terrainMapDataSetIDOffset);
 			}
@@ -4796,7 +4804,8 @@ bool BattlescapeGenerator::addBlock(int x, int y, MapBlock *block, RuleTerrain* 
 	bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE"); // yes, i'm hard coding these, big whoop, wanna fight about it?
 
 	int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-	if(_fileIsMAP)	
+	std::string filename = "MAPS/" + _blocks[x][y]->getName() + ".MAP";		
+	if(FileMap::fileExists(filename))
 	{
 		loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
 	}
@@ -5170,14 +5179,14 @@ void BattlescapeGenerator::loadMapForEditing()
 		if(extension.compare(".MAP2")==0)
 		{
 			_fileIsMAP=false;			
-		}
+		}	
 	}
 	else
 	{
 		filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP"; // NHR: Aqui se decide la extension
 		if(!FileMap::fileExists(filename))
 		{
-		    std::cout << "File " << filename << " doesn't exist. Trying MAP2 version" << std::endl;
+			Log(LOG_INFO) << "File " << filename << " doesn't exist. Trying MAP2 version";
 			filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP2"; 	
 			_fileIsMAP = false;			
 		}

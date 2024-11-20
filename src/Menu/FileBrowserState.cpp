@@ -820,11 +820,11 @@ void FileBrowserState::cbxFileTypeChange(Action *)
 {
 	if(_cbxFileType->getSelected() == 0) // NHR: Duda, probar
 	{
-	   _parent->setFileType("MAP");
+	   _parent->setFileType(".MAP");
 	}
 	else
 	{
-	   _parent->setFileType("MAP2");
+	   _parent->setFileType(".MAP2");
 	}
 }
 

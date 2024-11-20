@@ -233,9 +233,7 @@ public :
     /// Gets the type of the map file to load
     std::string getMapFileToLoadType();
     /// Sets the type of the map file to load
-    void setMapFileToLoadType(std::string name);
-    /// Returns true if map file to load is MAP type
-    bool isMapFileToLoadType();      
+    void setMapFileToLoadType(std::string type);
 
 };
 

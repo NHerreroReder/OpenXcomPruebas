@@ -1721,6 +1721,7 @@ void MapEditorState::btnSaveClick(Action *action)
 	if (_editor->currentMapFileNeedsDirectory())
 	{
 		_game->pushState(new FileBrowserState(this, true, _editor->getMapEditorSave()->getCurrentMapFile()->name));
+		_editor->getMapEditorSave()->getCurrentMapFile()->extension = this->getFileType(); // NHR: Set the type of MAP given by MAP/MAP2 button
 	}
 	else
 	{

@@ -712,7 +712,9 @@ void MapEditorMenuState::startEditor()
 	Options::baseYResolution = Options::baseYBattlescape;
 	_game->getScreen()->resetDisplay(false);
 
-    _editor->updateMapFileInfo();
+    //_editor->updateMapFileInfo();  // NHR: Changed, so even files loaded by FileBrowser calls FileBrowser to
+                                     // set savefile path.
+    _editor->updateMapFileInfo(_editor->getMapFileToLoadName(),"", _editor->getMapFileToLoadType(), _editor->getMapFileToLoadTerrain());  
     _fileName = "";
 
 	MapEditorState *mapEditorState = new MapEditorState(_editor);

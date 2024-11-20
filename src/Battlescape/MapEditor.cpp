@@ -915,15 +915,6 @@ std::string MapEditor::getFullPathToRMPToLoad()
 }
 
 /**
- * Returns true if map file to load is MAP type
- */
-bool MapEditor::isMapFileToLoadType()
-{
-    return _mapSave->getMapFileToLoad()->fileisMAP;
-}
-
-
-/**
  * Updates the file data on the current map
  * @param mapName changes the map name
  * @param baseDirectory where the file is located (parent directory for MAPS/ROUTES)
@@ -992,10 +983,14 @@ void MapEditor::saveMapFile()
 {
     std::string message = "STR_MAP_EDITOR_SAVED_SUCCESSFULLY";
     std::string filename = _mapSave->getCurrentMapFile()->name;
-    bool fileisMAP = _mapSave->getCurrentMapFile()->fileisMAP;
-    std::string fileType =  fileisMAP?"MAP":"MAP2";
+    std::string fileType =  _mapSave->getCurrentMapFile()->extension;
     std::string filepath = _mapSave->getCurrentMapFile()->baseDirectory;
     std::string logInfo = "\n    mapDataSets:\n";
+    bool fileisMAP;
+    if(fileType.compare(".MAP") == 0)
+        fileisMAP=true;
+    else
+        fileisMAP=false;        
     for (auto i : *_save->getMapDataSets())
     {
         logInfo += "      - " + i->getName() + "\n";
@@ -1013,7 +1008,7 @@ void MapEditor::saveMapFile()
         fullpath = fullpath + MapEditorSave::MAP_DIRECTORY;
     }
     fullpath = CrossPlatform::convertPath(fullpath);
-    fullpath = fullpath + filename + "." + fileType; //TODO add extensions to MapEditorSave's consts?
+    fullpath = fullpath + filename + fileType;
     Log(LOG_INFO) << "Saving edited map file " + fullpath;
 
 
@@ -1242,7 +1237,6 @@ std::string MapEditor::getMAPorRMPDirectory(std::string baseDirectory, std::stri
     std::string fullPath = "";
     std::string folder = rmpMode ? MapEditorSave::RMP_DIRECTORY : MapEditorSave::MAP_DIRECTORY;
     std::string extension2 = this->getMapFileToLoadType();
-    std::cout << "Extension:" << extension2 << std::endl;
     std::string extension = rmpMode ? ".RMP" : extension2;
 
     if (CrossPlatform::fileExists(CrossPlatform::convertPath(baseDirectory) + mapName + extension))
