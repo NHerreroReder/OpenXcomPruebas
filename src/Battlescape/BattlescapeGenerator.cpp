@@ -2062,11 +2062,7 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 	char size[3];
 	unsigned char value[4];
 	std::string filename = "MAPS/" + mapblock->getName() + ".MAP";
-	if(_fileIsMAP == false)
-	{
-		filename = "MAPS/" + mapblock->getName() + ".MAP2";
-	}
-	
+
 	std::unique_ptr<std::istream> mapFile = 0;
 	unsigned int terrainObjectID;
 
@@ -2084,8 +2080,7 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 
 	// Load file
 	if (!mapFile)
-		mapFile = FileMap::getIStream(filename);
-
+		mapFile = FileMap::getIStream(filename);    
 	mapFile->read((char*)&size, sizeof(size));
 	sizey = (int)size[0];
 	sizex = (int)size[1];
@@ -2144,6 +2139,284 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 		for (int part = O_FLOOR; part < O_MAX; ++part)
 		{
 			terrainObjectID = ((unsigned char)value[part]);
+			if (terrainObjectID>0)
+			{
+				int mapDataSetID = mapDataSetOffset;
+				unsigned int mapDataID = terrainObjectID;
+				MapData *md = terrain->getMapData(&mapDataID, &mapDataSetID);
+				if (mapDataSetOffset > 0) // ie: ufo or craft.
+				{
+					_save->getTile(Position(x, y, z))->setMapData(0, -1, -1, O_OBJECT);
+				}
+				TilePart tp = (TilePart) part;
+				_save->getTile(Position(x, y, z))->setMapData(md, mapDataID, mapDataSetID, tp);
+			}
+		}
+
+		_save->getTile(Position(x, y, z))->setDiscovered((discovered || mapblock->isFloorRevealed(z)), O_FLOOR);
+
+		x++;
+
+		if (x == (sizex + xoff))
+		{
+			x = xoff;
+			y++;
+		}
+		if (y == (sizey + yoff))
+		{
+			y = yoff;
+			z--;
+		}
+	}
+
+	if (!mapFile->eof())
+	{
+		throw Exception("Invalid MAP file: " + filename);
+	}
+
+	// Add the craft offset to the positions of the items if we're loading a craft map
+	// But don't do so if loading a verticalLevel, since the z offset of the craft is handled by that code
+	if (craft && zoff == 0)
+	{
+		zoff += _craftZ;
+	}
+	// Add the ufo offset to the positions of the items if we're loading a ufo map
+	// But don't do so if loading a verticalLevel, since the z offset of the ufo is handled by that code
+	if (ufoIndex >= 0 && zoff == 0)
+	{
+		zoff += _ufoZ[ufoIndex];
+	}
+
+	if (_generateFuel)
+	{
+		// if one of the mapBlocks has an items array defined, don't deploy fuel algorithmically
+		_generateFuel = mapblock->getItems()->empty();
+	}
+	auto primeEnd = mapblock->getItemsFuseTimers()->end();
+	for (auto& mapblockItemInfo : *mapblock->getItems())
+	{
+		auto prime = mapblock->getItemsFuseTimers()->find(mapblockItemInfo.first);
+		RuleItem *rule = _game->getMod()->getItem(mapblockItemInfo.first, true);
+		if (rule->getBattleType() == BT_CORPSE)
+		{
+			throw Exception("Placing corpse items (battleType: 11) on the map is not allowed. Item: " + rule->getType() + ", map block: " + mapblock->getName());
+		}
+		for (auto& itemPos : mapblockItemInfo.second)
+		{
+			if (itemPos.x >= mapblock->getSizeX() || itemPos.y >= mapblock->getSizeY() || itemPos.z >= mapblock->getSizeZ())
+			{
+				ss << "Item " << rule->getType() << " is outside of map block " << mapblock->getName() << ", position: [";
+				ss << itemPos.x << "," << itemPos.y << "," << itemPos.z << "], block size: [";
+				ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
+				throw Exception(ss.str());
+			}
+			BattleItem *item = _save->createItemForTile(rule, _save->getTile(itemPos + Position(xoff, yoff, zoff)));
+			if (prime != primeEnd)
+			{
+				item->setFuseTimer(RNG::generate(prime->second.first, prime->second.second));
+			}
+		}
+	}
+	// randomized items
+	for (auto& rngItems : *mapblock->getRandomizedItems())
+	{
+		if (rngItems.itemList.size() < 1)
+		{
+			continue; // skip empty definition
+		}
+		else
+		{
+			// mixed = false
+			int index = RNG::generate(0, rngItems.itemList.size() - 1);
+			RuleItem *rule = _game->getMod()->getItem(rngItems.itemList[index], true);
+
+			for (int j = 0; j < rngItems.amount; ++j)
+			{
+				if (rngItems.mixed)
+				{
+					// mixed = true
+					index = RNG::generate(0, rngItems.itemList.size() - 1);
+					rule = _game->getMod()->getItem(rngItems.itemList[index], true);
+				}
+
+				if (rule->getBattleType() == BT_CORPSE)
+				{
+					throw Exception("Placing corpse items (battleType: 11) on the map is not allowed. Item: " + rule->getType() + ", map block: " + mapblock->getName());
+				}
+				if (rngItems.position.x >= mapblock->getSizeX() || rngItems.position.y >= mapblock->getSizeY() || rngItems.position.z >= mapblock->getSizeZ())
+				{
+					ss << "Random item " << rule->getType() << " is outside of map block " << mapblock->getName() << ", position: [";
+					ss << rngItems.position.x << "," << rngItems.position.y << "," << rngItems.position.z << "], block size: [";
+					ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
+					throw Exception(ss.str());
+				}
+				_save->createItemForTile(rule, _save->getTile(rngItems.position + Position(xoff, yoff, zoff)));
+			}
+		}
+	}
+	// extended items
+	for (auto& extItemDef : *mapblock->getExtendedItems())
+	{
+		RuleItem* extRule = _game->getMod()->getItem(extItemDef.type, true);
+		if (extRule->getBattleType() == BT_CORPSE)
+		{
+			throw Exception("Placing corpse items (battleType: 11) on the map is not allowed. Item: " + extRule->getType() + ", map block: " + mapblock->getName());
+		}
+		for (auto& extPos : extItemDef.pos)
+		{
+			if (extPos.x >= mapblock->getSizeX() || extPos.y >= mapblock->getSizeY() || extPos.z >= mapblock->getSizeZ())
+			{
+				ss << "Extended item " << extRule->getType() << " is outside of map block " << mapblock->getName() << ", position: [";
+				ss << extPos.x << "," << extPos.y << "," << extPos.z << "], block size: [";
+				ss << mapblock->getSizeX() << "," << mapblock->getSizeY() << "," << mapblock->getSizeZ() << "]";
+				throw Exception(ss.str());
+			}
+			BattleItem* newExtItem = _save->createItemForTile(extRule, _save->getTile(extPos + Position(xoff, yoff, zoff)));
+			if (extItemDef.fuseTimerMin > -1 && extItemDef.fuseTimerMax > -1 && extItemDef.fuseTimerMin <= extItemDef.fuseTimerMax)
+			{
+				newExtItem->setFuseTimer(RNG::generate(extItemDef.fuseTimerMin, extItemDef.fuseTimerMax));
+			}
+			for (auto& extAmmoDef : extItemDef.ammoDef)
+			{
+				RuleItem* extAmmoRule = _game->getMod()->getItem(extAmmoDef.first, true);
+				if (extAmmoRule)
+				{
+					if (extAmmoRule->getBattleType() == BT_CORPSE)
+					{
+						throw Exception("Placing corpse items (battleType: 11) on the map is not allowed. Ammo item: " + extAmmoRule->getType() + ", map block: " + mapblock->getName());
+					}
+					BattleItem* newExtAmmoItem = _save->createItemForTile(extAmmoRule, _save->getTile(extPos + Position(xoff, yoff, zoff)));
+					if (extAmmoDef.second > 0 && extAmmoDef.second < newExtAmmoItem->getAmmoQuantity())
+					{
+						newExtAmmoItem->setAmmoQuantity(extAmmoDef.second);
+					}
+					if (newExtItem->isWeaponWithAmmo())
+					{
+						int slotAmmo = extRule->getSlotForAmmo(extAmmoRule);
+						if (slotAmmo == -1)
+						{
+							throw Exception("Ammo is not compatible. Weapon: " + extRule->getType() + ", ammo: " + extAmmoRule->getType() + ", map block: " + mapblock->getName());
+						}
+						else
+						{
+							if (newExtItem->getAmmoForSlot(slotAmmo) != 0)
+							{
+								throw Exception("Weapon is already loaded. Weapon: " + extRule->getType() + ", ammo: " + extAmmoRule->getType() + ", map block: " + mapblock->getName());
+							}
+							else
+							{
+								// Put ammo in weapon
+								newExtItem->setAmmoForSlot(slotAmmo, newExtAmmoItem);
+							}
+						}
+					}
+					else
+					{
+						// ammo is not needed, crash or ignore?
+					}
+				}
+			}
+		}
+	}
+
+	return sizez;
+}
+
+/**
+ * Loads an XCom format MAP2 file into the tiles of the battlegame.
+ * @param mapblock Pointer to MapBlock.
+ * @param xoff Mapblock offset in X direction.
+ * @param yoff Mapblock offset in Y direction.
+ * @param save Pointer to the current SavedBattleGame.
+ * @param terrain Pointer to the Terrain rule.
+ * @param discovered Whether or not this mapblock is discovered (eg. landing site of the XCom plane).
+ * @return int Height of the loaded mapblock (this is needed for spawnpoint calculation...)
+ * @sa http://www.ufopaedia.org/index.php?title=MAPS
+ * @note Y-axis is in reverse order.
+ */
+int BattlescapeGenerator::loadMAP2(MapBlock *mapblock, int xoff, int yoff, int zoff, RuleTerrain *terrain, int mapDataSetOffset, bool discovered, bool craft, int ufoIndex)
+{
+	int sizex, sizey, sizez;
+	int x = xoff, y = yoff, z = zoff;
+	uint16_t size[3];		
+	uint16_t value[4]; // NHR: Tile index is now 2-bytesSize, instead of 1byte (so you can have 65535 different tiles
+	                   //      instead of just 255.
+	std::string filename = "MAPS/" + mapblock->getName() + ".MAP2";
+	std::unique_ptr<std::istream> mapFile = 0;
+	unsigned int terrainObjectID;
+
+	// A little filename editing for loading a MAP direct from file instead of from mod
+	MapEditor *editor = _game->getMapEditor();
+	if (editor)
+	{
+		std::string baseDirectory = editor->getMapFileToLoadDirectory();
+		if (!baseDirectory.empty())
+		{
+			filename = editor->getFullPathToMAPToLoad();
+			mapFile = CrossPlatform::readFile(filename);
+		}
+	}
+
+	// Load file
+	if (!mapFile)
+		mapFile = FileMap::getIStream(filename);   
+	mapFile->read((char*)&size, sizeof(size));
+	sizey = (int)size[0];
+	sizex = (int)size[1];
+	sizez = (int)size[2];
+	mapblock->setSizeZ(sizez);
+
+	std::ostringstream ss;
+	if (sizez > _save->getMapSizeZ())
+	{
+		ss << "Height of map " + filename + " too big for this mission, block is " << sizez << ", expected: " << _save->getMapSizeZ();
+		throw Exception(ss.str());
+	}
+
+	if (sizex != mapblock->getSizeX() ||
+		sizey != mapblock->getSizeY())
+	{
+		ss << "Map block is not of the size specified " + filename + " is " << sizex << "x" << sizey << " , expected: " << mapblock->getSizeX() << "x" << mapblock->getSizeY();
+		throw Exception(ss.str());
+	}
+
+	z += sizez - 1;
+
+	for (int i = _mapsize_z-1; i >0; i--)
+	{
+		// check if there is already a layer - if so, we have to move Z up
+		MapData *floor = _save->getTile(Position(x, y, i))->getMapData(O_FLOOR);
+		if (floor != 0 && zoff == 0)
+		{
+			z += i;
+			if (craft && _craftZ == 0)
+			{
+				_craftZ = i;
+			}
+			if (ufoIndex >= 0 && _ufoZ[ufoIndex] == 0)
+			{
+				_ufoZ[ufoIndex] = i;
+			}
+			break;
+		}
+	}
+
+	if (z > (_save->getMapSizeZ()-1))
+	{
+		if (_save->getMissionType() == "STR_BASE_DEFENSE")
+		{
+			// we'll already have gone through _base->isOverlappingOrOverflowing() by the time we hit this, possibly multiple times
+			// let's just throw an exception and tell them to check the log, it'll have all the detail they'll need.
+			throw Exception("Something is wrong with your base, check your log file for additional information.");
+		}
+		throw Exception("Something is wrong in your map definitions, craft/ufo map is too tall?");
+	}
+
+	while (mapFile->read((char*)&value, sizeof(value)))
+	{
+		for (int part = O_FLOOR; part < O_MAX; ++part)
+		{
+			terrainObjectID = ((uint16_t)value[part]);
 			if (terrainObjectID>0)
 			{
 				int mapDataSetID = mapDataSetOffset;
@@ -3053,8 +3326,14 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 										bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 										int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-										loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
-
+										if(_fileIsMAP)
+										{
+											loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
+										}
+										else
+										{
+											loadMAP2(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
+										}
 										if (doLevels)
 										{
 											SDL_Rect blockRect;
@@ -3139,8 +3418,14 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 										bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 										int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-										loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
-
+										if(_fileIsMAP)
+										{
+											loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
+										}
+										else
+										{
+											loadMAP2(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
+										}										
 										if (doLevels)
 										{
 											SDL_Rect blockRect;
@@ -3292,7 +3577,14 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 
 		for (size_t i = 0; i < ufoMaps.size(); ++i)
 		{
-			loadMAP(ufoMaps[i], _ufoPos[i].x * 10, _ufoPos[i].y * 10, _ufoZ[i], ufoTerrain, mapDataSetIDOffset, false, false, i);
+			if(_fileIsMAP)
+			{
+				loadMAP(ufoMaps[i], _ufoPos[i].x * 10, _ufoPos[i].y * 10, _ufoZ[i], ufoTerrain, mapDataSetIDOffset, false, false, i);
+			}
+			else
+			{
+				loadMAP2(ufoMaps[i], _ufoPos[i].x * 10, _ufoPos[i].y * 10, _ufoZ[i], ufoTerrain, mapDataSetIDOffset, false, false, i);
+			}
 			loadRMP(ufoMaps[i], _ufoPos[i].x * 10, _ufoPos[i].y * 10, _ufoZ[i], Node::UFOSEGMENT);
 			for (int j = 0; j < ufoMaps[i]->getSizeX() / 10; ++j)
 			{
@@ -3314,7 +3606,14 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 			mds->loadData(_game->getMod()->getMCDPatch(mds->getName()));
 			_save->getMapDataSets()->push_back(mds);
 		}
-		loadMAP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, _craftRules->getBattlescapeTerrainData(), mapDataSetIDOffset + craftDataSetIDOffset, _craftRules->isMapVisible(), true);
+		if(_fileIsMAP)
+		{		
+			loadMAP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, _craftRules->getBattlescapeTerrainData(), mapDataSetIDOffset + craftDataSetIDOffset, _craftRules->isMapVisible(), true);
+		}
+		else
+		{
+			loadMAP2(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, _craftRules->getBattlescapeTerrainData(), mapDataSetIDOffset + craftDataSetIDOffset, _craftRules->isMapVisible(), true);
+		}		
 		loadRMP(craftMap, _craftPos.x * 10, _craftPos.y * 10, _craftZ, Node::CRAFTSEGMENT);
 		for (int i = 0; i < craftMap->getSizeX() / 10; ++i)
 		{
@@ -3890,7 +4189,14 @@ void BattlescapeGenerator::loadVerticalLevels(MapScript *command, bool repopulat
 					bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 					int terrainMapDataSetIDOffset = loadExtraTerrain(levelTerrain);
-					loadMAP(block, x * 10, y * 10, zOffset, levelTerrain, terrainMapDataSetIDOffset, visible);
+					if(_fileIsMAP)
+					{						
+						loadMAP(block, x * 10, y * 10, zOffset, levelTerrain, terrainMapDataSetIDOffset, visible);
+					}
+					else
+					{
+						loadMAP2(block, x * 10, y * 10, zOffset, levelTerrain, terrainMapDataSetIDOffset, visible);
+					}
 					_verticalLevelSegments.push_back(std::make_pair(block, Position(x, y, zOffset)));
 				}
 
@@ -3925,7 +4231,14 @@ void BattlescapeGenerator::loadVerticalLevels(MapScript *command, bool repopulat
 			bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE");
 
 			int terrainMapDataSetIDOffset = loadExtraTerrain(ceilingTerrain);
-			loadMAP(ceilingBlock, x * 10, y * 10, zOffset, ceilingTerrain, terrainMapDataSetIDOffset, visible);
+			if(_fileIsMAP)
+			{			
+				loadMAP(ceilingBlock, x * 10, y * 10, zOffset, ceilingTerrain, terrainMapDataSetIDOffset, visible);
+			}
+			else
+			{
+				loadMAP2(ceilingBlock, x * 10, y * 10, zOffset, ceilingTerrain, terrainMapDataSetIDOffset, visible);
+			}
 			_verticalLevelSegments.push_back(std::make_pair(ceilingBlock, Position(x, y, zOffset)));
 		}
 	}
@@ -4403,7 +4716,14 @@ bool BattlescapeGenerator::addLine(MapDirection direction, const std::vector<SDL
 			_blocks[roadX][roadY] = randomMapBlock2;
 			clearModule(roadX * 10, roadY * 10, 10, 10);
 			int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-			loadMAP(_blocks[roadX][roadY], roadX * 10, roadY * 10, 0, terrain, terrainMapDataSetIDOffset);
+			if(_fileIsMAP)
+			{				
+				loadMAP(_blocks[roadX][roadY], roadX * 10, roadY * 10, 0, terrain, terrainMapDataSetIDOffset);
+			}
+			else
+			{
+				loadMAP2(_blocks[roadX][roadY], roadX * 10, roadY * 10, 0, terrain, terrainMapDataSetIDOffset);
+			}
 
 			SDL_Rect blockRect;
 			blockRect.x = roadX;
@@ -4476,8 +4796,14 @@ bool BattlescapeGenerator::addBlock(int x, int y, MapBlock *block, RuleTerrain* 
 	bool visible = (_save->getMissionType() == "STR_BASE_DEFENSE"); // yes, i'm hard coding these, big whoop, wanna fight about it?
 
 	int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
-	loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
-
+	if(_fileIsMAP)	
+	{
+		loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
+	}
+	else
+	{
+		loadMAP2(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
+	}
 	return true;
 }
 
@@ -4835,18 +5161,23 @@ void BattlescapeGenerator::loadMapForEditing()
 	std::unique_ptr<std::istream> mapFile = 0;
 	MapBlock *block = 0;
 	bool loadFromFullPath = !_game->getMapEditor()->getMapFileToLoadDirectory().empty();
-
 	if (loadFromFullPath)
 	{
 		filename = _game->getMapEditor()->getFullPathToMAPToLoad();
 		mapFile = CrossPlatform::readFile(filename);
+		size_t lastindex = filename.find_last_of("."); 
+		std::string extension=filename.substr(lastindex,filename.size());
+		if(extension.compare(".MAP2")==0)
+		{
+			_fileIsMAP=false;			
+		}
 	}
 	else
 	{
 		filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP"; // NHR: Aqui se decide la extension
 		if(!FileMap::fileExists(filename))
 		{
-		    std::cout << "El fichero " << filename << " no existe. Probando la versión MAP2" << std::endl;
+		    std::cout << "File " << filename << " doesn't exist. Trying MAP2 version" << std::endl;
 			filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP2"; 	
 			_fileIsMAP = false;			
 		}
@@ -4859,14 +5190,24 @@ void BattlescapeGenerator::loadMapForEditing()
 
 	int sizex, sizey, sizez;
 	char size[3];
+	uint16_t size2[3];	
 	// Load file
 	if (!mapFile)
 		mapFile = FileMap::getIStream(filename);
-
-	mapFile->read((char*)&size, sizeof(size));
-	sizey = (int)size[0];
-	sizex = (int)size[1];
-	sizez = (int)size[2];
+    if(_fileIsMAP)
+	{
+		mapFile->read((char*)&size, sizeof(size));
+		sizey = (int)size[0];
+		sizex = (int)size[1];
+		sizez = (int)size[2];			
+	}
+	else 
+	{	
+		mapFile->read((char*)&size2, sizeof(size2));
+		sizey = (int)size2[0];
+		sizex = (int)size2[1];
+		sizez = (int)size2[2];			
+	}
 
 	_mapsize_x = sizex;
 	_mapsize_y = sizey;
@@ -4878,13 +5219,21 @@ void BattlescapeGenerator::loadMapForEditing()
 		i->loadData(_game->getMod()->getMCDPatch(i->getName()));
 		_save->getMapDataSets()->push_back(i);
 	}
-   	std::cout << "Cargando fichero " << filename  << std::endl;
+
 	if (loadFromFullPath)
 	{
 		block = new MapBlock(_game->getMapEditor()->getMapFileToLoadName(), sizex, sizey, sizez);
 	}
 
-	loadMAP(block, 0, 0, 0, _terrain, 0, true);
+	if(_fileIsMAP)	
+	{
+		loadMAP(block, 0, 0, 0, _terrain, 0, true);
+	}
+	else
+	{	
+		loadMAP2(block, 0, 0, 0, _terrain, 0, true);
+	}
+
 	loadRMP(block, 0, 0, 0, 0, false);
 
 	if (loadFromFullPath)

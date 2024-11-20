@@ -830,7 +830,7 @@ size_t MapEditor::searchForMapFileInfo(std::string filePath)
     MapFileInfo fileInfo;
     fileInfo.baseDirectory = getBaseDirectory(filePath);
     fileInfo.name = CrossPlatform::noExt(CrossPlatform::baseFilename(filePath));
-    
+    fileInfo.extension = CrossPlatform::getExt(CrossPlatform::baseFilename(filePath));
     return _mapSave->findMatchingFiles(&fileInfo);
 }
 
@@ -848,6 +848,22 @@ std::string MapEditor::getMapFileToLoadName()
 void MapEditor::setMapFileToLoadName(std::string name)
 {
     _mapSave->getMapFileToLoad()->name = name;
+}
+
+/**
+ * Gets the type of the map file to load
+ */
+std::string MapEditor::getMapFileToLoadType()
+{
+    return _mapSave->getMapFileToLoad()->extension;
+}
+
+/**
+ * Sets the type of the map file to load
+ */
+void MapEditor::setMapFileToLoadType(std::string extension)
+{
+    _mapSave->getMapFileToLoad()->extension = extension;
 }
 
 /**
@@ -901,17 +917,9 @@ std::string MapEditor::getFullPathToRMPToLoad()
 /**
  * Returns true if map file to load is MAP type
  */
-bool MapEditor::getMapFileToLoadType()
+bool MapEditor::isMapFileToLoadType()
 {
     return _mapSave->getMapFileToLoad()->fileisMAP;
-}
-
-/**
- * Sets map file to load type
- */
-void MapEditor::setMapFileToLoadType(bool fileisMAP)
-{
-    _mapSave->getMapFileToLoad()->fileisMAP = fileisMAP;
 }
 
 
@@ -920,10 +928,10 @@ void MapEditor::setMapFileToLoadType(bool fileisMAP)
  * @param mapName changes the map name
  * @param baseDirectory where the file is located (parent directory for MAPS/ROUTES)
  */
-void MapEditor::updateMapFileInfo(std::string mapName, std::string baseDirectory, bool fileisMAP, std::string terrainName)
+void MapEditor::updateMapFileInfo(std::string mapName, std::string baseDirectory, std::string extension, std::string terrainName)
 {
     _mapSave->getCurrentMapFile()->name = mapName;
-    _mapSave->getCurrentMapFile()->fileisMAP = fileisMAP;  
+    _mapSave->getCurrentMapFile()->extension = extension;  
     _mapSave->getCurrentMapFile()->baseDirectory = baseDirectory;
     _mapSave->getCurrentMapFile()->terrain = terrainName;
     _mapSave->getCurrentMapFile()->mods.clear();
@@ -943,7 +951,7 @@ void MapEditor::updateMapFileInfo(std::string mapName, std::string baseDirectory
  * @param fullPath directory to the file
  * @param terrainName name of the terrain (defaults to "")
  */
-void MapEditor::updateMapFileInfo(std::string fullPath, bool fileIsMAP, std::string terrainName)
+void MapEditor::updateMapFileInfo(std::string fullPath, std::string fileExtension, std::string terrainName)
 {
     // Get just the file name
     std::string fileName = getFileName(fullPath);
@@ -955,7 +963,7 @@ void MapEditor::updateMapFileInfo(std::string fullPath, bool fileIsMAP, std::str
     {
         terrainName = _mapSave->getCurrentMapFile()->terrain;
     }
-    updateMapFileInfo(fileName, filePath, fileIsMAP, terrainName);
+    updateMapFileInfo(fileName, filePath, fileExtension, terrainName);
 }
 
 /**
@@ -1233,7 +1241,9 @@ std::string MapEditor::getMAPorRMPDirectory(std::string baseDirectory, std::stri
 {
     std::string fullPath = "";
     std::string folder = rmpMode ? MapEditorSave::RMP_DIRECTORY : MapEditorSave::MAP_DIRECTORY;
-    std::string extension = rmpMode ? ".RMP" : ".MAP";
+    std::string extension2 = this->getMapFileToLoadType();
+    std::cout << "Extension:" << extension2 << std::endl;
+    std::string extension = rmpMode ? ".RMP" : extension2;
 
     if (CrossPlatform::fileExists(CrossPlatform::convertPath(baseDirectory) + mapName + extension))
     {
