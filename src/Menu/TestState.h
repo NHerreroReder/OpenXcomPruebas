@@ -66,6 +66,7 @@ private:
 	std::vector<std::string> _paletteList;
 	std::map<int, Palette*> _vanillaPalettes;
 	std::vector<std::string> _testCases;
+	bool _fileIsMAP;
 	/// Test cases.
 	void testCase4();
 	void testCase3();
