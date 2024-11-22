@@ -683,6 +683,7 @@ en-US:
   STR_MAP_EDITOR_MENU_SEARCH: "Search:"
   STR_CANCEL_TERRAIN_PICKING: "Cancel Selection"
   STR_PICKING_TERRAIN: "Choose terrain for new map"  
+  STR_CONVERT: "Convert MAPs to MAP2"
 #MapEditorOptionsState.cpp
   STR_MAP_INFO: "MAP INFORMATION"
   STR_LOAD_MAP: "LOAD MAP"

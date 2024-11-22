@@ -821,7 +821,7 @@ void FileBrowserState::btnCancelClick(Action *)
 }
 
 /**
- * Changes the Music Format option.
+ * Changes the Type Format option.
  * @param action Pointer to an action.
  */
 void FileBrowserState::cbxFileTypeChange(Action *)

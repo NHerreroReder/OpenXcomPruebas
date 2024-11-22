@@ -76,6 +76,7 @@ MapEditorMenuState::MapEditorMenuState() : _selectedMap(-1), _pickTerrainMode(fa
 	_txtTitle = new Text(320, 17, 0, 9);
 
 	_btnOk = new TextButton(100, 16, 8, 176);
+	_btnConvert = new TextButton(100, 16, 8, 176);    
 	_btnCancel = new TextButton(100, 16, 110, 176);
     _btnNew = new TextButton(100, 16, 212, 176);
 
@@ -109,6 +110,7 @@ MapEditorMenuState::MapEditorMenuState() : _selectedMap(-1), _pickTerrainMode(fa
 	add(_window, "window", "mainMenu");
 	add(_txtTitle, "text", "mainMenu");
 	add(_btnOk, "button", "mainMenu");
+	add(_btnConvert, "button", "mainMenu");    
 	add(_btnCancel, "button", "mainMenu");
     add(_btnNew, "button", "mainMenu");
     add(_filterTerrain, "button", "mainMenu");
@@ -137,6 +139,10 @@ MapEditorMenuState::MapEditorMenuState() : _selectedMap(-1), _pickTerrainMode(fa
 	_btnOk->onMouseClick((ActionHandler)&MapEditorMenuState::btnOkClick);
 	_btnOk->onKeyboardPress((ActionHandler)&MapEditorMenuState::btnOkClick, Options::keyOk);
     _btnOk->setVisible(false);
+
+	_btnConvert->setText(tr("STR_CONVERT"));
+	_btnConvert->onMouseClick((ActionHandler)&MapEditorMenuState::btnConvertClick);
+    _btnConvert->setVisible(true);    
 
 	_btnCancel->setText(tr("STR_CANCEL"));
 	_btnCancel->onMouseClick((ActionHandler)&MapEditorMenuState::btnCancelClick);
@@ -303,7 +309,7 @@ void MapEditorMenuState::populateMapsList()
     _selectedMap = -1;
     _txtSelectedMap->setText("");
     _txtSelectedMapTerrain->setText("");
-    _btnOk->setVisible(false);
+    _btnOk->setVisible(false);  
 
     // If we're creating a new map, the list should have terrains instead of map names
     if (_pickTerrainMode)
@@ -560,10 +566,11 @@ void MapEditorMenuState::btnMapFilterClick(Action *action)
 
 /**
  * Handles clicking the file browser button
- * @param action Poiter to an action.
+ * @param action Pointer to an action.
  */
 void MapEditorMenuState::btnBrowserClick(Action *action)
 {
+    _btnConvert->setVisible(true);
     _game->pushState(new FileBrowserState(this, false));
 }
 
@@ -585,6 +592,7 @@ void MapEditorMenuState::lstMapsClick(Action *)
         }
         _editor->getMapEditorSave()->getMapFileToLoad()->terrain = _mapsList.at(_selectedMap).second;
         _btnOk->setVisible(true);
+        _btnConvert->setVisible(false); 
     }
     else
     {
@@ -592,6 +600,7 @@ void MapEditorMenuState::lstMapsClick(Action *)
         _txtSelectedMap->setText("");
         _txtSelectedMapTerrain->setText("");
         _btnOk->setVisible(false);
+        _btnConvert->setVisible(true);         
     }
 }
 
@@ -738,7 +747,7 @@ void MapEditorMenuState::btnCancelClick(Action *)
 void MapEditorMenuState::btnNewMapClick(Action *action)
 {
     _pickTerrainMode = !_pickTerrainMode;
-
+    _btnConvert->setVisible(false);  
     if (_pickTerrainMode)
     {
         // Press the button down
@@ -755,6 +764,7 @@ void MapEditorMenuState::btnNewMapClick(Action *action)
         action->getDetails()->type = SDL_MOUSEBUTTONUP;
         _btnNew->mouseRelease(action, this);
         _btnNew->setText(tr("STR_NEW_MAP"));
+        _btnConvert->setVisible(true);
         _btnNew->draw();
 
         // unclicking this button also cancels picking a terrain for a map saved under multiple terrains
@@ -785,6 +795,53 @@ void MapEditorMenuState::setNewMapInformation(std::string newMapName, int newMap
     _newMapX = newMapX;
     _newMapY = newMapY;
     _newMapZ = newMapZ;
+}
+
+/**
+ * Convert MAP files loaded to MAP2 format
+ * @param action Pointer to an action.
+ */
+void MapEditorMenuState::btnConvertClick(Action *action)
+{
+	std::string infilename, outfilename; 
+	std::unique_ptr<std::istream> mapFile = 0;
+	char size[3];    
+	unsigned char value;    
+	int sizex, sizey, sizez;    
+    std::vector<uint16_t> data16;       
+
+    for (auto &i : _mapsList)
+    {
+        data16.clear();
+        std::string cadena = i.first;
+        infilename = "MAPS/" + cadena + ".MAP";	
+        // Options::getActiveMasterInfo()->getPath() --> ./user/ to save MAP2 files in user folder
+        outfilename = Options::getActiveMasterInfo()->getPath() + "/MAPS/" + cadena + ".MAP2";	
+
+		mapFile = FileMap::getIStream(infilename);  
+	    mapFile->read((char*)&size, sizeof(size));
+	    sizey = (int)size[0];
+	    sizex = (int)size[1];
+	    sizez = (int)size[2];        
+
+        data16.push_back((uint16_t)sizey);
+        data16.push_back((uint16_t)sizex);  
+        data16.push_back((uint16_t)sizez);    
+        // Read tiles info   
+        while (mapFile->read((char*)&value, sizeof(value)))
+        {
+            data16.push_back((uint16_t)value);
+        }       
+	    if (!mapFile->eof())
+	    {
+		    throw Exception("Invalid MAP file: " + infilename);
+	    }
+        if (!CrossPlatform::writeFile(outfilename, data16))
+        {
+                throw Exception("Failed to save " + outfilename);
+        }            
+    }
+
 }
 
 }
