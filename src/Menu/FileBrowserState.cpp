@@ -208,7 +208,7 @@ FileBrowserState::FileBrowserState(State *parent, bool saveMode, std::string fil
 	_btnCancel->onKeyboardPress((ActionHandler)&FileBrowserState::btnCancelClick, Options::keyCancel);
     _btnCancel->onKeyboardRelease((ActionHandler)&FileBrowserState::edtQuickSearchFocus, Options::keyToggleQuickSearch);
 
-	_fileExtensions.clear();  // NHR: could be a std::string? defined here
+	_fileExtensions.clear();
 	_fileExtensions.push_back("MAP");
 	_fileExtensions.push_back("MAP2");	
 
@@ -826,7 +826,7 @@ void FileBrowserState::btnCancelClick(Action *)
  */
 void FileBrowserState::cbxFileTypeChange(Action *)
 {
-	if(_cbxFileType->getSelected() == 0) // NHR: Duda, probar
+	if(_cbxFileType->getSelected() == 0)
 	{
 	   _parent->setFileType(".MAP");
 	}

@@ -2339,7 +2339,7 @@ int BattlescapeGenerator::loadMAP2(MapBlock *mapblock, int xoff, int yoff, int z
 	int sizex, sizey, sizez;
 	int x = xoff, y = yoff, z = zoff;
 	uint16_t size[3];		
-	uint16_t value[4]; // NHR: Tile index is now 2-bytesSize, instead of 1byte (so you can have 65535 different tiles
+	uint16_t value[4]; // Tile index is now 2-bytesSize, instead of 1byte (so you can have 65535 different tiles
 	                   //      instead of just 255.
 	std::string filename = "MAPS/" + mapblock->getName() + ".MAP2";
 	std::unique_ptr<std::istream> mapFile = 0;
@@ -5183,7 +5183,7 @@ void BattlescapeGenerator::loadMapForEditing()
 	}
 	else
 	{
-		filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP"; // NHR: Aqui se decide la extension
+		filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP";
 		if(!FileMap::fileExists(filename))
 		{
 			Log(LOG_INFO) << "File " << filename << " doesn't exist. Trying MAP2 version";
