@@ -215,7 +215,13 @@ FileBrowserState::FileBrowserState(State *parent, bool saveMode, std::string fil
     _cbxFileType->setOptions(_fileExtensions, true);
 	_cbxFileType->setSelected(0);
 	_cbxFileType->onChange((ActionHandler)&FileBrowserState::cbxFileTypeChange);	
-    _cbxFileType->setVisible(true);
+	if(saveMode)
+	{
+   		_cbxFileType->setVisible(true);
+	}else
+	{
+   		_cbxFileType->setVisible(false);
+	}
 
 	_txtSearch->setText(tr(saveMode ? "STR_FILE_BROWSER_ENTER_NAME" : "STR_FILE_BROWSER_SEARCH"));
 
@@ -311,8 +317,10 @@ void FileBrowserState::populateBrowserList(std::string directory, bool forceRefr
 		_currentDirectory = directory;
 
 		// change "" to exention to search
-		auto directoryContents = CrossPlatform::getFolderContents(directory, "");
+		auto directoryContents = CrossPlatform::getFolderContents(directory, "MAP");
 		_fileData.clear();
+		std::copy(directoryContents.begin(), directoryContents.end(), std::back_inserter(_fileData));
+		directoryContents = CrossPlatform::getFolderContents(directory, "MAP2");
 		std::copy(directoryContents.begin(), directoryContents.end(), std::back_inserter(_fileData));
 	}
 
