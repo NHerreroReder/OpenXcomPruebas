@@ -922,11 +922,11 @@ int TestState::loadMAP(MapBlock *mapblock)
 {
 	int sizez;
 	char size[3];
-    uint16_t size2[3];
-    bool fileIsMAP = true;
+   	uint16_t size2[3];
+    	bool fileIsMAP = true;
 	std::ostringstream filename;
 	filename << "MAPS/" << mapblock->getName() << ".MAP";
-    if(!FileMap::fileExists(filename.str()))
+	if(!FileMap::fileExists(filename.str()))
 	{
 		filename.str("");
 		filename.clear();
@@ -939,7 +939,7 @@ int TestState::loadMAP(MapBlock *mapblock)
 	{
 		throw Exception(filename.str() + " not found");
 	}
-    if (fileIsMAP)
+	if (fileIsMAP)
 	{
 		mapFile->read((char*)&size, sizeof(size));
 		//sizey = (int)size[0];
@@ -954,6 +954,7 @@ int TestState::loadMAP(MapBlock *mapblock)
 		sizez = (int)size2[2];		
 	}
 	//mapblock->setSizeZ(sizez); // commented out, for testing purposes we don't need to HACK it like in real code
+
 	return sizez;
 }
 

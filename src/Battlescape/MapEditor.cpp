@@ -1012,7 +1012,6 @@ void MapEditor::saveMapFile()
     fullpath = fullpath + filename + fileType;
     Log(LOG_INFO) << "Saving edited map file " + fullpath;
 
-
     std::vector<unsigned char> data;
     std::vector<uint16_t> data2;    
     if(fileisMAP){
@@ -1061,14 +1060,17 @@ void MapEditor::saveMapFile()
                         if(mapDataID <256)
                         {
                             data.push_back((unsigned char)mapDataID);
-                        }else
+                        }
+			else
                         {
                             message = "STR_MAP_EDITOR_SAVED_FAILED";
                             saveOk = false;
                         }
                     }
                     else
-                        data2.push_back((uint16_t)mapDataID);                    
+		    {
+                        data2.push_back((uint16_t)mapDataID);
+		    }
                 }
             }
         }

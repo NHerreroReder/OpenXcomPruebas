@@ -19,7 +19,6 @@
  */
 
 #include <vector>
-#include <iostream>
 #include "Position.h"
 #include "../Mod/MapData.h"
 

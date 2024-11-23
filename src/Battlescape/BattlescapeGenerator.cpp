@@ -77,7 +77,6 @@ BattlescapeGenerator::BattlescapeGenerator(Game *game) :
 	_mapsize_x(0), _mapsize_y(0), _mapsize_z(0), _missionTexture(0), _globeTexture(0), _worldShade(0),
 	_unitSequence(0), _craftInventoryTile(0), _alienCustomDeploy(0), _alienCustomMission(0), _alienItemLevel(0), _ufoDamagePercentage(0),
 	_baseInventory(false), _generateFuel(true), _craftDeployed(false), _ufoDeployed(false), _craftZ(0), _craftPos(), _markAsReinforcementsBlock(0), _blocksToDo(0), _dummy(0)
-    , _fileIsMAP(true)
 {
 	_allowAutoLoadout = !Options::disableAutoEquip;
 	if (_game->getSavedGame()->getDisableSoldierEquipment())
@@ -2062,7 +2061,6 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 	char size[3];
 	unsigned char value[4];
 	std::string filename = "MAPS/" + mapblock->getName() + ".MAP";
-
 	std::unique_ptr<std::istream> mapFile = 0;
 	unsigned int terrainObjectID;
 
@@ -2081,6 +2079,7 @@ int BattlescapeGenerator::loadMAP(MapBlock *mapblock, int xoff, int yoff, int zo
 	// Load file
 	if (!mapFile)
 		mapFile = FileMap::getIStream(filename);    
+
 	mapFile->read((char*)&size, sizeof(size));
 	sizey = (int)size[0];
 	sizex = (int)size[1];
@@ -2338,10 +2337,10 @@ int BattlescapeGenerator::loadMAP2(MapBlock *mapblock, int xoff, int yoff, int z
 {
 	int sizex, sizey, sizez;
 	int x = xoff, y = yoff, z = zoff;
-	uint16_t size[3];		
+	uint16_t size[3];  // Dimensiones are now stored as uint16_t for ease of saving.		
 	uint16_t value[4]; // Tile index is now 2-bytesSize, instead of 1byte (so you can have 65535 different tiles
 	                   //      instead of just 255.
-	std::string filename = "MAPS/" + mapblock->getName() + ".MAP2";
+	std::string filename = "MAPS/" + mapblock->getName() + ".MAP2"; // Extension MAP2
 	std::unique_ptr<std::istream> mapFile = 0;
 	unsigned int terrainObjectID;
 
@@ -3327,12 +3326,12 @@ void BattlescapeGenerator::generateMap(const std::vector<MapScript*> *script, co
 
 										int terrainMapDataSetIDOffset = loadExtraTerrain(terrain);
 										std::string filename = "MAPS/" + _blocks[x][y]->getName() + ".MAP";	
-										bool existe = FileMap::fileExists(filename);
-										if(existe)
+										// Always try to load first a MAP version (at /user/mod/<modname>/MAPS, standard/xcom1/MAPS or UFO/MAPS)
+										if(FileMap::fileExists(filename))
 										{
 											loadMAP(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
 										}
-										else
+										else // if not found in any path, tries again with MAP2 extension
 										{
 											loadMAP2(_blocks[x][y], x * 10, y * 10, 0, terrain, terrainMapDataSetIDOffset, visible);
 										}
@@ -5170,6 +5169,7 @@ void BattlescapeGenerator::loadMapForEditing()
 	std::unique_ptr<std::istream> mapFile = 0;
 	MapBlock *block = 0;
 	bool loadFromFullPath = !_game->getMapEditor()->getMapFileToLoadDirectory().empty();
+	bool fileIsMAP = true;
 	if (loadFromFullPath)
 	{
 		filename = _game->getMapEditor()->getFullPathToMAPToLoad();
@@ -5178,7 +5178,7 @@ void BattlescapeGenerator::loadMapForEditing()
 		std::string extension=filename.substr(lastindex,filename.size());
 		if(extension.compare(".MAP2")==0)
 		{
-			_fileIsMAP=false;			
+			fileIsMAP = false;			
 		}	
 	}
 	else
@@ -5188,11 +5188,11 @@ void BattlescapeGenerator::loadMapForEditing()
 		{
 			Log(LOG_INFO) << "File " << filename << " doesn't exist. Trying MAP2 version";
 			filename = "MAPS/" + _game->getMapEditor()->getMapFileToLoadName() + ".MAP2"; 	
-			_fileIsMAP = false;			
+			fileIsMAP = false;			
 		}
 		else
 		{
-			_fileIsMAP = true;	
+			fileIsMAP = true;	
 		}
 		block = _terrain->getMapBlock(_game->getMapEditor()->getMapFileToLoadName());
 	}
@@ -5203,12 +5203,12 @@ void BattlescapeGenerator::loadMapForEditing()
 	// Load file
 	if (!mapFile)
 		mapFile = FileMap::getIStream(filename);
-    if(_fileIsMAP)
+	if(fileIsMAP)
 	{
 		mapFile->read((char*)&size, sizeof(size));
 		sizey = (int)size[0];
 		sizex = (int)size[1];
-		sizez = (int)size[2];			
+		sizez = (int)size[2];
 	}
 	else 
 	{	
@@ -5234,7 +5234,7 @@ void BattlescapeGenerator::loadMapForEditing()
 		block = new MapBlock(_game->getMapEditor()->getMapFileToLoadName(), sizex, sizey, sizez);
 	}
 
-	if(_fileIsMAP)	
+	if(fileIsMAP)	
 	{
 		loadMAP(block, 0, 0, 0, _terrain, 0, true);
 	}

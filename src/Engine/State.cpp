@@ -692,7 +692,6 @@ std::string State::getFileName()
 	return _fileName;
 }
 
-
 /**
  * Sets a file type for access by a parent state of the file browser
  * @param fileType the type/extension of the file

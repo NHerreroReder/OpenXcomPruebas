@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
-#include <iostream>
 #include <iomanip>
 #include <SDL_gfxPrimitives.h>
 #include "Map.h"

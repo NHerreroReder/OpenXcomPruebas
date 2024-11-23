@@ -156,7 +156,8 @@ FileBrowserState::FileBrowserState(State *parent, bool saveMode, std::string fil
 	{
 		add(button, "button", "mainMenu");
 	}
-	add(_cbxFileType, "button", "mainMenu");	
+	add(_cbxFileType, "button", "mainMenu");
+
 	centerAllSurfaces();
 
 	// Set up objects
@@ -835,6 +836,5 @@ void FileBrowserState::cbxFileTypeChange(Action *)
 	   _parent->setFileType(".MAP2");
 	}
 }
-
 
 }
