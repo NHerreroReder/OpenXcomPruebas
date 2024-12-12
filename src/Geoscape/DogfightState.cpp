@@ -18,8 +18,6 @@
  */
 #include "DogfightState.h"
 #include <cmath>
-#include <sstream>
-#include <iostream>
 #include "GeoscapeState.h"
 #include "../Engine/Game.h"
 #include "../Engine/Screen.h"
@@ -941,6 +939,7 @@ void DogfightState::animate()
 void DogfightState::update()
 {
 	bool finalRun = false;
+	bool missileImpact = false;
 	// Check if craft is not low on fuel when window minimized, and
 	// Check if crafts destination hasn't been changed when window minimized.
 	if (!_ufoIsAttacking)
@@ -1106,7 +1105,7 @@ void DogfightState::update()
 		// NHR: TODO:
 		//      Distance to apply self-destruct? AGGRESSIVE_DIST by now
 		//      Damage to UFO?
-		if (_craft->getRules()->isMissile()) // NHR:craft is a missile?
+		if (_craft->getRules()->isMissile() && !_craft->isDestroyed()) // NHR:craft is a missile?
 		{	
 			if (_currentDist <= AGGRESSIVE_DIST) // Minimum distance condition
 			{
@@ -1123,10 +1122,10 @@ void DogfightState::update()
 				}			
 				damage = std::max(0, damage - _ufo->getCraftStats().armor);
 				_ufo->setDamage(_ufo->getDamage() + damage, _game->getMod());	
-				std::cout << "UFO Damage:" << _ufo->getDamage() << "IsCrashed:" << _ufo->isCrashed();
 				if (_ufo->isCrashed())
 					_ufo->setShotDownByCraftId(_craft->getUniqueId());
-				//_end = true;	// NHR: If on, dogfight ends; if don't it tries another dogfight cycle
+				missileImpact = true;
+				//endDogfight(); // To end without messages at Dogfight Screen
 			}			
 		}	
 		// Move projectiles and check for hits.
@@ -1285,7 +1284,10 @@ void DogfightState::update()
 						{
 							_craft->setDamage(_craft->getDamage() + damage);
 							drawCraftDamage();
-							setStatus("STR_INTERCEPTOR_DAMAGED");
+							if (_craft->getRules()->isMissile())
+								setStatus("STR_MISSILE_DAMAGED");
+							else
+								setStatus("STR_INTERCEPTOR_DAMAGED");
 							_game->getMod()->getSound("GEO.CAT", Mod::INTERCEPTOR_HIT)->play(); //10
 							if (_mode == _btnCautious && _craft->getDamagePercentage() >= 50 && !_ufoIsAttacking)
 							{
@@ -1480,7 +1482,14 @@ void DogfightState::update()
 		else if (_craft->isDestroyed())
 		{
 			// End dogfight if craft is destroyed.
-			setStatus("STR_INTERCEPTOR_DESTROYED");
+			if (_craft->getRules()->isMissile())
+			{
+				if (missileImpact == true)
+					setStatus("STR_MISSILE_HIT");
+				else
+					setStatus("STR_MISSILE_INTERCEPTED");
+			}else
+				setStatus("STR_INTERCEPTOR_DESTROYED");
 			if (_ufoIsAttacking)
 			{
 				// Note: this was moved to GeoscapeState.cpp, as it is not 100% reliable here
