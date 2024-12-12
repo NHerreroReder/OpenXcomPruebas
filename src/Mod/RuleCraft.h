@@ -208,6 +208,7 @@ private:
 	int _maxSkinIndex;
 	bool _keepCraftAfterFailedMission, _allowLanding, _spacecraft, _notifyWhenRefueled, _autoPatrol, _undetectable;
 	int _listOrder, _maxAltitude;
+	int _missilePower;
 	std::string _defaultAltitude;
 	RuleCraftDeployment _deployment;
 	std::vector<int> _craftInventoryTile;
@@ -329,6 +330,10 @@ public:
 	bool canAutoPatrol() const;
 	/// Is this craft immune to detection by HKs and alien bases?
 	bool isUndetectable() const { return _undetectable; }
+	/// Is this craft a missile/drone type (auto_self destruct in dogfighting)
+	bool isMissile() const { return (_missilePower>0); }	
+	/// Is this craft a missile/drone type (auto_self destruct in dogfighting)
+	int missilePower() const { return _missilePower; }		
 	/// Gets the list weight for this craft.
 	int getListOrder() const;
 	/// Gets the deployment priority for the craft.

@@ -19,6 +19,7 @@
 #include "DogfightState.h"
 #include <cmath>
 #include <sstream>
+#include <iostream>
 #include "GeoscapeState.h"
 #include "../Engine/Game.h"
 #include "../Engine/Screen.h"
@@ -249,6 +250,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 {
 	_screen = false;
 	_craft->setInDogfight(true);
+	bool missileCraft = _craft->getRules()->isMissile();
 	_weaponNum = _craft->getRules()->getWeapons();
 	if (_weaponNum > RuleCraft::WeaponMax)
 		_weaponNum = RuleCraft::WeaponMax;
@@ -398,7 +400,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	_window->drawRect(crop.getCrop(), 15);
 	crop.blit(_window);
 
-	if (_ufoIsAttacking)
+	if (_ufoIsAttacking || missileCraft)
 	{
 		_window->drawRect(_btnStandoff->getX() + 2, _btnStandoff->getY() + 2, _btnStandoff->getWidth() - 4, _btnStandoff->getHeight() - 4, dogfightInterface->getElement("standoffButton")->color + 4);
 		if (_disableCautious)
@@ -446,25 +448,26 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	_btnStandoff->setGroup(&_mode);
 	_btnStandoff->onMousePress((ActionHandler)&DogfightState::btnStandoffPress);
 	_btnStandoff->onMousePress((ActionHandler)&DogfightState::btnStandoffRightPress, SDL_BUTTON_RIGHT);
-	_btnStandoff->setVisible(!_ufoIsAttacking);
+	_btnStandoff->setVisible(!_ufoIsAttacking && !missileCraft);
 
 	_btnCautious->copy(_window);
 	_btnCautious->setGroup(&_mode);
 	_btnCautious->onMousePress((ActionHandler)&DogfightState::btnCautiousPress);
 	_btnCautious->onMousePress((ActionHandler)&DogfightState::btnCautiousRightPress, SDL_BUTTON_RIGHT);
-	_btnCautious->setVisible(!_disableCautious);
+	_btnCautious->setVisible(!_disableCautious && !missileCraft);
 
 	_btnStandard->copy(_window);
 	_btnStandard->setGroup(&_mode);
 	_btnStandard->onMousePress((ActionHandler)&DogfightState::btnStandardPress);
 	_btnStandard->onMousePress((ActionHandler)&DogfightState::btnStandardRightPress, SDL_BUTTON_RIGHT);
-	_btnStandard->setVisible(!_ufoIsAttacking);
+	_btnStandard->setVisible(!_ufoIsAttacking && !missileCraft);
 
 	_btnAggressive->copy(_window);
 	_btnAggressive->setGroup(&_mode);
 	_btnAggressive->onMousePress((ActionHandler)&DogfightState::btnAggressivePress);
 	_btnAggressive->onMousePress((ActionHandler)&DogfightState::btnAggressiveRightPress, SDL_BUTTON_RIGHT);
-	if (_ufoIsAttacking)
+	_btnAggressive->setVisible(!missileCraft);	
+	if (_ufoIsAttacking || missileCraft)
 	{
 		btnAggressivePress(0);
 	}
@@ -473,7 +476,7 @@ DogfightState::DogfightState(GeoscapeState *state, Craft *craft, Ufo *ufo, bool 
 	_btnDisengage->onMousePress((ActionHandler)&DogfightState::btnDisengagePress);
 	_btnDisengage->onMousePress((ActionHandler)&DogfightState::btnDisengageRightPress, SDL_BUTTON_RIGHT);
 	_btnDisengage->setGroup(&_mode);
-	_btnDisengage->setVisible(!_disableDisengage);
+	_btnDisengage->setVisible(!_disableDisengage && !missileCraft);
 
 	_btnUfo->copy(_window);
 	_btnUfo->onMouseClick((ActionHandler)&DogfightState::btnUfoClick);
@@ -1099,6 +1102,33 @@ void DogfightState::update()
 			}
 		}
 
+        // NHR: Deal with self-destruction -> damage over Craft AND UFO (this damage is prior to any other)
+		// NHR: TODO:
+		//      Distance to apply self-destruct? AGGRESSIVE_DIST by now
+		//      Damage to UFO?
+		if (_craft->getRules()->isMissile()) // NHR:craft is a missile?
+		{	
+			if (_currentDist <= AGGRESSIVE_DIST) // Minimum distance condition
+			{
+				int damage = _craft->getRules()->missilePower(); 
+				_craft->setDamage(_craft->getCraftStats().damageMax); // Self-destructs
+				// Handle UFO shields
+				int shieldDamage = 0;
+				if (_ufo->getShield() != 0)
+				{
+					shieldDamage = damage;
+					// scale down by bleed-through factor and scale up by shield-effectiveness factor
+					damage = std::max(0, shieldDamage - _ufo->getShield()) * _ufo->getCraftStats().shieldBleedThrough;
+					_ufo->setShield(_ufo->getShield() - shieldDamage);
+				}			
+				damage = std::max(0, damage - _ufo->getCraftStats().armor);
+				_ufo->setDamage(_ufo->getDamage() + damage, _game->getMod());	
+				std::cout << "UFO Damage:" << _ufo->getDamage() << "IsCrashed:" << _ufo->isCrashed();
+				if (_ufo->isCrashed())
+					_ufo->setShotDownByCraftId(_craft->getUniqueId());
+				//_end = true;	// NHR: If on, dogfight ends; if don't it tries another dogfight cycle
+			}			
+		}	
 		// Move projectiles and check for hits.
 		for (auto* p : _projectiles)
 		{
@@ -2105,13 +2135,14 @@ void DogfightState::btnUfoClick(Action *)
  */
 void DogfightState::previewClick(Action *)
 {
+	bool missileCraft = _craft->getRules()->isMissile();
 	_preview->setVisible(false);
 	// Reenable all other buttons to prevent misclicks
-	_btnStandoff->setVisible(!_ufoIsAttacking);
-	_btnCautious->setVisible(!_disableCautious);
-	_btnStandard->setVisible(!_ufoIsAttacking);
-	_btnAggressive->setVisible(true);
-	_btnDisengage->setVisible(!_disableDisengage);
+	_btnStandoff->setVisible(!_ufoIsAttacking && !missileCraft);
+	_btnCautious->setVisible(!_disableCautious && !missileCraft);
+	_btnStandard->setVisible(!_ufoIsAttacking && !missileCraft);
+	_btnAggressive->setVisible(!missileCraft);
+	_btnDisengage->setVisible(!_disableDisengage && !missileCraft);
 	_btnUfo->setVisible(true);
 	_btnMinimize->setVisible(!_ufoIsAttacking || _craftIsDefenseless);
 	for (int i = 0; i < _weaponNum; ++i)
