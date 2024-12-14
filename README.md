@@ -12,6 +12,27 @@ and the [wiki](https://www.ufopaedia.org/index.php/OpenXcom).
 
 Uses modified code from SDL\_gfx (LGPL) with permission from author.
 
+## Missile fork
+This is a fork from great OXCE (by Meridian & others) engine. It adds the capability
+of defining a new "missile type" for crafts, so crafts will behave as if they were 
+missiles/kamikaze-drones. So, when Dogfight windows opens, you won't be able to 
+interact with missile-craft controls (select distance, stand-off,...): it will 
+automatically active the AGGRESSIVE_DIST approach and try to reach that distance. 
+Meanwhile, UFO can try to intercept missile, firing at it. If missile-craft reaches 
+AGGRESIVE_DIST it will explode, autodestructing itself and dealing some damage to -or
+destroying! - the UFO.
+
+In order to define a craft with this feature, you should add a new characteristic
+(missilePower) to crafts ruleset. Default missilePower value is 0, so craft will not 
+behave as a missile but will act as a normal-vanilla craft. missilePower > 0 will 
+trigger the missile behavior when entering Dogfight; value of missilePower will be the 
+damage inflicted to UFO when/if it reaches AGGRESSIVE_DIST and explodes.
+It is advisable to give an avoidBonus to missile-craft definition as it would be fast
+and also small, hence difficult to hit. You can adjust all other parameters as maxDamage 
+or speed as in any normal/vanilla craft. 
+
+An example MOD is provided [here](https://github.com/FlaubertNHR/OXCE-Mod-Collection/tree/main/MissileMOD-WIP) to test this fork.
+
 ## Installation
 
 OpenXcom requires a vanilla copy of the X-COM resources -- from either or both
