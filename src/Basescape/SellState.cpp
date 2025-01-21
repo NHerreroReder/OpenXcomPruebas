@@ -944,6 +944,27 @@ void SellState::lstItemsMousePress(Action *action)
 			}
 		}
 	}
+	else if (action->getDetails()->button.button == SDL_BUTTON_LEFT)
+	{
+		if (getRow().type == TRANSFER_ITEM)
+		{
+			RuleItem *rule = (RuleItem*)getRow().rule;
+			if (rule != 0)
+			{
+				std::string articleId = rule->getUfopediaType();
+				Ufopaedia::openArticle(_game, articleId);
+			}
+		}
+		else if (getRow().type == TRANSFER_CRAFT)
+		{
+			RuleCraft *rule = (RuleCraft*)getRow().rule;
+			if (rule != 0)
+			{
+				std::string articleId = rule->getType();
+				Ufopaedia::openArticle(_game, articleId);
+			}
+		}
+	}	
 	else if (action->getDetails()->button.button == SDL_BUTTON_MIDDLE)
 	{
 		if (getRow().type == TRANSFER_ITEM)
